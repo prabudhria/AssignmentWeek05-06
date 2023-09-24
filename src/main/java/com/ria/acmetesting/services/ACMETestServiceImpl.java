@@ -33,11 +33,12 @@ public class ACMETestServiceImpl implements ACMETestService{
     @Override
     @Transactional
     public Student saveStudent(Student student){
-        studentRepository.save(student);
-        resetStudent(student.getId());
-        List<Integer> subjects = subjectRepository.getAllSubjects();
-        for(Integer subjectId : subjects) scoreRepository.initializeStudentScore(student.getId(), subjectId, 0);
-        return studentRepository.findById(student.getId()).get();
+        return studentRepository.save(student);
+//        studentRepository.save(student);
+//        resetStudent(student.getId());
+//        List<Integer> subjects = subjectRepository.getAllSubjects();
+//        for(Integer subjectId : subjects) scoreRepository.initializeStudentScore(student.getId(), subjectId, 0);
+//        return studentRepository.findById(student.getId()).get();
     }
 
 
@@ -61,69 +62,69 @@ public class ACMETestServiceImpl implements ACMETestService{
     @Override
     @Transactional
     public Question starTest(int studentId) {
-        Student student = studentRepository.findById(studentId).get();
-        int startingQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-                student.getCurrentSubject(), student.getLevelOneQuestionId());
-        student.setLevelOneQuestionId(startingQuestionId);
-        student.setTotalQuestionsAttempted(1);
-        studentRepository.save(student);
-
-        return questionRepository.getQuestion(startingQuestionId);
+//        Student student = studentRepository.findById(studentId).get();
+//        int startingQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+//                student.getCurrentSubject(), student.getLevelOneQuestionId());
+//        student.setLevelOneQuestionId(startingQuestionId);
+//        student.setTotalQuestionsAttempted(1);
+//        studentRepository.save(student);
+//
+//        return questionRepository.getQuestion(startingQuestionId);
+        return null;
     }
 
     @Override
     @Transactional
     public Question getNextQuestion(int studentId, String selectedOption) {
-        Student student = studentRepository.findById(studentId).get();
-        int nextQuestionId=0;
-        if(evaluateAnswer(student, selectedOption)) {
-            if(student.getTotalQuestionsAttempted()==5) return resetStudent(studentId);
-            int currentLevelOfStudent=student.getCurrentLevel();
-            if(currentLevelOfStudent+1>3) student.setCurrentLevel(1);
-            else student.setCurrentLevel(currentLevelOfStudent+1);
-            switch (student.getCurrentLevel()) {
-                case 1 -> {
-                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-                            student.getCurrentSubject(), student.getLevelOneQuestionId());
-                    student.setLevelOneQuestionId(nextQuestionId);
-                }
-                case 2 -> {
-                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-                            student.getCurrentSubject(), student.getLevelTwoQuestionId());
-                    student.setLevelTwoQuestionId(nextQuestionId);
-                }
-                case 3 -> {
-                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-                            student.getCurrentSubject(), student.getLevelThreeQuestionId());
-                    student.setLevelThreeQuestionId(nextQuestionId);
-                }
-            }
-
-        }
-        else{
-            if(student.getTotalQuestionsAttempted()==5) return resetStudent(studentId);
-            student.setCurrentLevel(1);
-            nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-                    student.getCurrentSubject(), student.getLevelOneQuestionId());
-            student.setLevelOneQuestionId(nextQuestionId);
-        }
-        student.setTotalQuestionsAttempted(student.getTotalQuestionsAttempted()+1);
-        studentRepository.save(student);
-        return questionRepository.findById(nextQuestionId).get();
-//        Question question = questionRepository.findById(nextQuestionId).get();
-//        return new QuestionResponseDTO(question.getStatement(), question.getOptions());
+//        Student student = studentRepository.findById(studentId).get();
+//        int nextQuestionId=0;
+//        if(evaluateAnswer(student, selectedOption)) {
+//            if(student.getTotalQuestionsAttempted()==5) return resetStudent(studentId);
+//            int currentLevelOfStudent=student.getCurrentLevel();
+//            if(currentLevelOfStudent+1>3) student.setCurrentLevel(1);
+//            else student.setCurrentLevel(currentLevelOfStudent+1);
+//            switch (student.getCurrentLevel()) {
+//                case 1 -> {
+//                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+//                            student.getCurrentSubject(), student.getLevelOneQuestionId());
+//                    student.setLevelOneQuestionId(nextQuestionId);
+//                }
+//                case 2 -> {
+//                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+//                            student.getCurrentSubject(), student.getLevelTwoQuestionId());
+//                    student.setLevelTwoQuestionId(nextQuestionId);
+//                }
+//                case 3 -> {
+//                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+//                            student.getCurrentSubject(), student.getLevelThreeQuestionId());
+//                    student.setLevelThreeQuestionId(nextQuestionId);
+//                }
+//            }
+//
+//        }
+//        else{
+//            if(student.getTotalQuestionsAttempted()==5) return resetStudent(studentId);
+//            student.setCurrentLevel(1);
+//            nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+//                    student.getCurrentSubject(), student.getLevelOneQuestionId());
+//            student.setLevelOneQuestionId(nextQuestionId);
+//        }
+//        student.setTotalQuestionsAttempted(student.getTotalQuestionsAttempted()+1);
+//        studentRepository.save(student);
+//        return questionRepository.findById(nextQuestionId).get();
+        return null;
     }
 
     @Transactional
     private Question resetStudent(int studentId) {
-        Student student = studentRepository.findById(studentId).get();
-        student.setCurrentSubject(null);
-        student.setCurrentLevel(1);
-        student.setTotalQuestionsAttempted(0);
-        student.setLevelOneQuestionId(0);
-        student.setLevelTwoQuestionId(0);
-        student.setLevelThreeQuestionId(0);
-        studentRepository.save(student);
+//        Student student = studentRepository.findById(studentId).get();
+//        student.setCurrentSubject(null);
+//        student.setCurrentLevel(1);
+//        student.setTotalQuestionsAttempted(0);
+//        student.setLevelOneQuestionId(0);
+//        student.setLevelTwoQuestionId(0);
+//        student.setLevelThreeQuestionId(0);
+//        studentRepository.save(student);
         return null;
     }
 
@@ -139,13 +140,14 @@ public class ACMETestServiceImpl implements ACMETestService{
     }
 
     private int getQuestionAnsweredId(Student student) {
-        int currentQuestionLevelOfStudent=student.getCurrentLevel();
-        return switch (currentQuestionLevelOfStudent) {
-            case 1 -> student.getLevelOneQuestionId();
-            case 2 -> student.getLevelTwoQuestionId();
-            case 3 -> student.getLevelThreeQuestionId();
-            default -> 0;
-        };
+//        int currentQuestionLevelOfStudent=student.getCurrentLevel();
+//        return switch (currentQuestionLevelOfStudent) {
+//            case 1 -> student.getLevelOneQuestionId();
+//            case 2 -> student.getLevelTwoQuestionId();
+//            case 3 -> student.getLevelThreeQuestionId();
+//            default -> 0;
+//        };
+        return 0;
     }
 
 

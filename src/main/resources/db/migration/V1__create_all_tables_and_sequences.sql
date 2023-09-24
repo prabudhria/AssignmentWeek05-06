@@ -22,9 +22,10 @@ create table student (
         current_subject varchar(255),
         current_level integer,
         total_questions_attempted integer,
-        level_one_question_id integer,
-        level_two_question_id integer,
-        level_three_question_id integer,
+        level_question_id integer[],
+--        level_one_question_id integer,
+--        level_two_question_id integer,
+--        level_three_question_id integer,
         primary key (id)
     );
 

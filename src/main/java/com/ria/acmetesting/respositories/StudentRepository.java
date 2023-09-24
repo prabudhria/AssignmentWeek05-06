@@ -15,7 +15,6 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
 //    void markSubject(String subject, int studentId);
 
     @Modifying
-    @Query(value = "update Student s set s.currentLevel=1, s.levelOneQuestionId=-1," +
-            "s.levelTwoQuestionId=-1,s.levelThreeQuestionId=-1 where s.id=?1")
+    @Query(value = "update Student s set s.currentLevel=1, s.levelQuestionId='{0, 0, 0}' where s.id=?1")
     void initializeQuestionLevels(int studentId);
 }

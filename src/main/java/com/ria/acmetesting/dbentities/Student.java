@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.Set;
 
 @Entity
@@ -20,9 +21,10 @@ public class Student {
     private String currentSubject;
     private int currentLevel;
     private int totalQuestionsAttempted;
-    private int levelOneQuestionId;
-    private int levelTwoQuestionId;
-    private int levelThreeQuestionId;
+    private ArrayList<Integer> levelQuestionId = new ArrayList<>();
+//    private int levelOneQuestionId;
+//    private int levelTwoQuestionId;
+//    private int levelThreeQuestionId;
 
     @JsonIgnore
     @ManyToMany(cascade = CascadeType.ALL)
