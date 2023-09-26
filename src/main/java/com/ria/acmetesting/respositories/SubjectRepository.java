@@ -13,7 +13,7 @@ public interface SubjectRepository extends JpaRepository<Subject, Integer> {
     Subject getSubject(int questionId);
 
     @Query(value = "select s.id from Subject s")
-    List<Integer> getAllSubjects();
+    List<Integer> getAllSubjectIds();
 
     @Query(value = "select s.id from Subject s where s.name=?1")
     int getIdByName(String subject);

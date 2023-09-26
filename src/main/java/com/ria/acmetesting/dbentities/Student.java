@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -11,6 +12,7 @@ import java.util.Set;
 @Entity
 @Getter
 @Setter
+@ToString
 @Table(name = "student")
 public class Student {
     @Id
@@ -35,7 +37,17 @@ public class Student {
     @OneToMany(mappedBy = "student")
     private Set<Score> score;
 
-
-
+    public void setLevelQuestionId(int questionId, int level){
+        this.levelQuestionId.set(level-1, questionId);
+    }
+    public void setLevelOneQuestionId(int questionId){
+        this.levelQuestionId.set(0, questionId);
+    }
+    public void setLevelTwoQuestionId(int questionId){
+        this.levelQuestionId.set(1, questionId);
+    }
+    public void setLevelThreeQuestionId(int questionId){
+        this.levelQuestionId.set(2, questionId);
+    }
 }
 

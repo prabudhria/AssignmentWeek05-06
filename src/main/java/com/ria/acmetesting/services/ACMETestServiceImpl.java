@@ -3,18 +3,23 @@ package com.ria.acmetesting.services;
 import com.ria.acmetesting.dbentities.Question;
 import com.ria.acmetesting.dbentities.Student;
 import com.ria.acmetesting.dbentities.Subject;
-import com.ria.acmetesting.dtos.QuestionResponseDTO;
+import com.ria.acmetesting.dtos.QuestionDTO;
+import com.ria.acmetesting.dtos.StudentDTO;
+import com.ria.acmetesting.exceptionhandling.ExamHasEndedException;
 import com.ria.acmetesting.respositories.QuestionRepository;
 import com.ria.acmetesting.respositories.ScoreRepository;
 import com.ria.acmetesting.respositories.StudentRepository;
 import com.ria.acmetesting.respositories.SubjectRepository;
+import org.apache.coyote.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.query.Param;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ACMETestServiceImpl implements ACMETestService{
@@ -32,100 +37,107 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     @Override
     @Transactional
-    public Student saveStudent(Student student){
-        return studentRepository.save(student);
-//        studentRepository.save(student);
-//        resetStudent(student.getId());
-//        List<Integer> subjects = subjectRepository.getAllSubjects();
-//        for(Integer subjectId : subjects) scoreRepository.initializeStudentScore(student.getId(), subjectId, 0);
-//        return studentRepository.findById(student.getId()).get();
+    public StudentDTO saveStudent(Student student){
+        studentRepository.save(student);
+        resetStudent(student.getId());
+        return new StudentDTO(studentRepository.findById(student.getId()).get());
     }
 
 
 
     @Override
     public Integer getScore(int studentId) {
-        return null;
+        return scoreRepository.getTotalScore(studentId);
     }
 
     @Override
     @Transactional
     public List<String> getRemainingSubjects(int studentId) {
-        List<Integer> remainingSubjectIds =  scoreRepository.getRemainingSubjects(studentId);
+        List<Integer> attemptedSubjects =  scoreRepository.getAttemptedSubjects(studentId);
         List<String> remainingSubjectNames = new ArrayList<>();
-        for(Integer subjectId: remainingSubjectIds) {
-            remainingSubjectNames.add(subjectRepository.findById(subjectId).get().getName());
+        List<Integer> allSubjects = subjectRepository.getAllSubjectIds();
+        for(Integer subjectId: allSubjects) {
+            boolean flag=true;
+            for(Integer studentSubjectId : attemptedSubjects){
+                if(subjectId.equals(studentSubjectId)) {
+                    flag = false;
+                    break;
+                }
+            }
+            if(flag) remainingSubjectNames.add(subjectRepository.findById(subjectId).get().getName());
         }
         return remainingSubjectNames;
     }
 
     @Override
     @Transactional
-    public Question starTest(int studentId) {
-//        Student student = studentRepository.findById(studentId).get();
-//        int startingQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-//                student.getCurrentSubject(), student.getLevelOneQuestionId());
-//        student.setLevelOneQuestionId(startingQuestionId);
-//        student.setTotalQuestionsAttempted(1);
-//        studentRepository.save(student);
-//
-//        return questionRepository.getQuestion(startingQuestionId);
-        return null;
+    public QuestionDTO starTest(int studentId) {
+        Student student = studentRepository.findById(studentId).get();
+
+        int startingQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+                student.getCurrentSubject(), student.getLevelQuestionId().get(0));
+        student.setLevelOneQuestionId(startingQuestionId);
+        student.setTotalQuestionsAttempted(1);
+        studentRepository.save(student);
+        return new QuestionDTO(questionRepository.getQuestion(startingQuestionId));
     }
 
     @Override
     @Transactional
-    public Question getNextQuestion(int studentId, String selectedOption) {
-//        Student student = studentRepository.findById(studentId).get();
-//        int nextQuestionId=0;
-//        if(evaluateAnswer(student, selectedOption)) {
-//            if(student.getTotalQuestionsAttempted()==5) return resetStudent(studentId);
-//            int currentLevelOfStudent=student.getCurrentLevel();
-//            if(currentLevelOfStudent+1>3) student.setCurrentLevel(1);
-//            else student.setCurrentLevel(currentLevelOfStudent+1);
-//            switch (student.getCurrentLevel()) {
-//                case 1 -> {
-//                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-//                            student.getCurrentSubject(), student.getLevelOneQuestionId());
-//                    student.setLevelOneQuestionId(nextQuestionId);
-//                }
-//                case 2 -> {
-//                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-//                            student.getCurrentSubject(), student.getLevelTwoQuestionId());
-//                    student.setLevelTwoQuestionId(nextQuestionId);
-//                }
-//                case 3 -> {
-//                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-//                            student.getCurrentSubject(), student.getLevelThreeQuestionId());
-//                    student.setLevelThreeQuestionId(nextQuestionId);
-//                }
-//            }
-//
-//        }
-//        else{
-//            if(student.getTotalQuestionsAttempted()==5) return resetStudent(studentId);
-//            student.setCurrentLevel(1);
-//            nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-//                    student.getCurrentSubject(), student.getLevelOneQuestionId());
-//            student.setLevelOneQuestionId(nextQuestionId);
-//        }
-//        student.setTotalQuestionsAttempted(student.getTotalQuestionsAttempted()+1);
-//        studentRepository.save(student);
-//        return questionRepository.findById(nextQuestionId).get();
-        return null;
+    public QuestionDTO getNextQuestion(int studentId, String selectedOption) throws ExamHasEndedException {
+        Student student = studentRepository.findById(studentId).get();
+        int nextQuestionId=0;
+        if(evaluateAnswer(student, selectedOption)) {
+            if(student.getTotalQuestionsAttempted()==5){
+                resetStudent(studentId);
+                throw new ExamHasEndedException();
+//                return null;
+            }
+            int currentLevelOfStudent=student.getCurrentLevel();
+            if(currentLevelOfStudent+1>3) student.setCurrentLevel(1);
+            else student.setCurrentLevel(currentLevelOfStudent+1);
+            switch (student.getCurrentLevel()) {
+                case 1 -> {
+                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+                            student.getCurrentSubject(), student.getLevelQuestionId().get(0));
+                    student.setLevelOneQuestionId(nextQuestionId);
+                }
+                case 2 -> {
+                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+                            student.getCurrentSubject(), student.getLevelQuestionId().get(1));
+                    student.setLevelTwoQuestionId(nextQuestionId);
+                }
+                case 3 -> {
+                    nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+                            student.getCurrentSubject(), student.getLevelQuestionId().get(2));
+                    student.setLevelThreeQuestionId(nextQuestionId);
+                }
+            }
+
+        }
+        else{
+            if(student.getTotalQuestionsAttempted()==5){
+                resetStudent(studentId);
+                throw new ExamHasEndedException();
+            }
+            student.setCurrentLevel(1);
+            nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+                    student.getCurrentSubject(), student.getLevelQuestionId().get(0));
+            student.setLevelOneQuestionId(nextQuestionId);
+        }
+        student.setTotalQuestionsAttempted(student.getTotalQuestionsAttempted()+1);
+        studentRepository.save(student);
+        return new QuestionDTO(questionRepository.findById(nextQuestionId).get());
     }
 
     @Transactional
-    private Question resetStudent(int studentId) {
-//        Student student = studentRepository.findById(studentId).get();
-//        student.setCurrentSubject(null);
-//        student.setCurrentLevel(1);
-//        student.setTotalQuestionsAttempted(0);
-//        student.setLevelOneQuestionId(0);
-//        student.setLevelTwoQuestionId(0);
-//        student.setLevelThreeQuestionId(0);
-//        studentRepository.save(student);
-        return null;
+    private void resetStudent(int studentId) {
+        Student student = studentRepository.findById(studentId).get();
+        student.setCurrentSubject(null);
+        student.setCurrentLevel(1);
+        student.setTotalQuestionsAttempted(0);
+        studentRepository.initializeQuestionLevels(studentId);
+        studentRepository.save(student);
     }
 
     @Transactional
@@ -140,23 +152,18 @@ public class ACMETestServiceImpl implements ACMETestService{
     }
 
     private int getQuestionAnsweredId(Student student) {
-//        int currentQuestionLevelOfStudent=student.getCurrentLevel();
-//        return switch (currentQuestionLevelOfStudent) {
-//            case 1 -> student.getLevelOneQuestionId();
-//            case 2 -> student.getLevelTwoQuestionId();
-//            case 3 -> student.getLevelThreeQuestionId();
-//            default -> 0;
-//        };
-        return 0;
+        int currentQuestionLevelOfStudent=student.getCurrentLevel();
+        return student.getLevelQuestionId().get(currentQuestionLevelOfStudent-1);
     }
 
 
     @Override
     @Transactional
-    public Student markSubject(int studentId, String subject) {
+    public StudentDTO markSubject(int studentId, String subject) {
         Student student = studentRepository.findById(studentId).get();
         student.setCurrentSubject(subject);
-        return studentRepository.save(student);
+        scoreRepository.initializeStudentScore(studentId, subjectRepository.getIdByName(subject), 0);
+        return new StudentDTO(studentRepository.save(student));
     }
 
     @Override
