@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+//import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.Set;
 import java.util.Set;
 
 @Entity
@@ -22,9 +25,5 @@ public class Question {
     private String subject;
     private String answer;
     private String options;
-
-    @JsonIgnore
-    @ManyToMany(cascade = CascadeType.ALL)
-    private Set<Student> attemptingStudent;
 
 }

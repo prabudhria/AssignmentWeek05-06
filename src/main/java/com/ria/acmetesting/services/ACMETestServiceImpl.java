@@ -5,7 +5,7 @@ import com.ria.acmetesting.dbentities.Student;
 import com.ria.acmetesting.dbentities.Subject;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
-import com.ria.acmetesting.exceptionhandling.ExamHasEndedException;
+import com.ria.acmetesting.exceptionhandling.*;
 import com.ria.acmetesting.respositories.QuestionRepository;
 import com.ria.acmetesting.respositories.ScoreRepository;
 import com.ria.acmetesting.respositories.StudentRepository;
@@ -18,7 +18,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,7 +39,8 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     @Override
     @Transactional
-    public StudentDTO saveStudent(Student student){
+    public StudentDTO saveStudent(Student student) {
+        if(student.getName() == null || student.getAge()==0) throw new StudentNameOrAgeNullException();
         studentRepository.save(student);
         resetStudent(student.getId());
         return new StudentDTO(studentRepository.findById(student.getId()).get());
@@ -52,8 +55,15 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     @Override
     @Transactional
-    public List<String> getRemainingSubjects(int studentId) {
-        List<Integer> attemptedSubjects =  scoreRepository.getAttemptedSubjects(studentId);
+    public List<String> getRemainingSubjects(int studentId){
+        List<Integer> attemptedSubjects;
+        try{
+            attemptedSubjects =  scoreRepository.getAttemptedSubjects(studentId);
+        }
+        catch (Exception e){
+            throw new StudentNotFoundException();
+        }
+
         List<String> remainingSubjectNames = new ArrayList<>();
         List<Integer> allSubjects = subjectRepository.getAllSubjectIds();
         for(Integer subjectId: allSubjects) {
@@ -71,12 +81,12 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     @Override
     @Transactional
-    public QuestionDTO starTest(int studentId) {
-        Student student = studentRepository.findById(studentId).get();
+    public QuestionDTO starTest(int studentId){
+        Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
 
         int startingQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
                 student.getCurrentSubject(), student.getLevelQuestionId().get(0));
-        student.setLevelOneQuestionId(startingQuestionId);
+        student.setLevelQuestionId(startingQuestionId, 1);
         student.setTotalQuestionsAttempted(1);
         studentRepository.save(student);
         return new QuestionDTO(questionRepository.getQuestion(startingQuestionId));
@@ -84,33 +94,39 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     @Override
     @Transactional
-    public QuestionDTO getNextQuestion(int studentId, String selectedOption) throws ExamHasEndedException {
-        Student student = studentRepository.findById(studentId).get();
+    public QuestionDTO getNextQuestion(int studentId, String selectedOption) {
+        Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
+        if(!selectedOption.equals("a") && !selectedOption.equals("b") && !selectedOption.equals("c") && !selectedOption.equals("d")) {
+            throw new WrongOptionSelectedException();
+        }
         int nextQuestionId=0;
         if(evaluateAnswer(student, selectedOption)) {
             if(student.getTotalQuestionsAttempted()==5){
                 resetStudent(studentId);
                 throw new ExamHasEndedException();
-//                return null;
             }
             int currentLevelOfStudent=student.getCurrentLevel();
+
             if(currentLevelOfStudent+1>3) student.setCurrentLevel(1);
             else student.setCurrentLevel(currentLevelOfStudent+1);
+
+            if(currentLevelOfStudent < 1 || currentLevelOfStudent > 3) throw new LevelDoesNotExistException();
+
             switch (student.getCurrentLevel()) {
                 case 1 -> {
                     nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
                             student.getCurrentSubject(), student.getLevelQuestionId().get(0));
-                    student.setLevelOneQuestionId(nextQuestionId);
+                    student.setLevelQuestionId(nextQuestionId, 1);
                 }
                 case 2 -> {
                     nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
                             student.getCurrentSubject(), student.getLevelQuestionId().get(1));
-                    student.setLevelTwoQuestionId(nextQuestionId);
+                    student.setLevelQuestionId(nextQuestionId, 2);
                 }
                 case 3 -> {
                     nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
                             student.getCurrentSubject(), student.getLevelQuestionId().get(2));
-                    student.setLevelThreeQuestionId(nextQuestionId);
+                    student.setLevelQuestionId(nextQuestionId, 3);
                 }
             }
 
@@ -123,7 +139,7 @@ public class ACMETestServiceImpl implements ACMETestService{
             student.setCurrentLevel(1);
             nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
                     student.getCurrentSubject(), student.getLevelQuestionId().get(0));
-            student.setLevelOneQuestionId(nextQuestionId);
+            student.setLevelQuestionId(nextQuestionId, 1);
         }
         student.setTotalQuestionsAttempted(student.getTotalQuestionsAttempted()+1);
         studentRepository.save(student);
@@ -160,26 +176,38 @@ public class ACMETestServiceImpl implements ACMETestService{
     @Override
     @Transactional
     public StudentDTO markSubject(int studentId, String subject) {
-        Student student = studentRepository.findById(studentId).get();
+        Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
         student.setCurrentSubject(subject);
-        scoreRepository.initializeStudentScore(studentId, subjectRepository.getIdByName(subject), 0);
+        int subjectId;
+        try{
+            subjectId = subjectRepository.getIdByName(subject);
+        }
+        catch (Exception e){
+            throw new SubjectNotFoundException();
+        }
+        scoreRepository.initializeStudentScore(studentId, subjectId, 0);
         return new StudentDTO(studentRepository.save(student));
     }
 
     @Override
-    public Question addQuestion(Question question) {
-        return questionRepository.save(question);
+    public Question addQuestion(Question question){
+        try{
+            return questionRepository.save(question);
+        }
+        catch (Exception e){
+            throw new RequiredQuestionFieldNullException();
+        }
     }
 
 
     @Override
-    public Question getQuestion(@Param("questionId")int questionId){
-        return questionRepository.getQuestion(questionId);
+    public Question getQuestion(int questionId) {
+        return questionRepository.findById(questionId).orElseThrow(QuestionNotFoundException::new);
     }
 
     @Override
-    public Subject getSubject(int subjectId) {
-        return subjectRepository.getSubject(subjectId);
+    public Subject getSubject(int subjectId){
+        return subjectRepository.findById(subjectId).orElseThrow(SubjectNotFoundException::new);
     }
 
     @Override

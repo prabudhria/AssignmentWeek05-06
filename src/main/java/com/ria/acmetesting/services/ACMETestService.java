@@ -5,7 +5,7 @@ import com.ria.acmetesting.dbentities.Student;
 import com.ria.acmetesting.dbentities.Subject;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
-import com.ria.acmetesting.exceptionhandling.ExamHasEndedException;
+import com.ria.acmetesting.exceptionhandling.*;
 
 import java.util.List;
 
@@ -15,9 +15,9 @@ public interface ACMETestService {
 
     Integer getScore(int studentId);
 
-    List<String> getRemainingSubjects(int studentId);
+    List<String> getRemainingSubjects(int studentId) ;
 
-    QuestionDTO getNextQuestion(int studentId, String subject) throws ExamHasEndedException;
+    QuestionDTO getNextQuestion(int studentId, String subject);
 
     QuestionDTO starTest(int studentId);
 
