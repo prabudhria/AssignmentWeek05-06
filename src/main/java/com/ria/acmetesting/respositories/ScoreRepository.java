@@ -18,7 +18,7 @@ public interface ScoreRepository extends JpaRepository<Score, ScoreKey> {
     @Query(value = "select s.subject.id from Score s where s.student.id=?1")
 //    @Query(value = "select subject_name from score where student_id=? and score = ?", nativeQuery = true)
 //    @Query(value = "select s1.subject.name from Score s1 join Subject s2 on s2.name=s1.subject.name where s1.student.id=?1 and s1.score=?2")
-    List<Integer> getAttemptedSubjects(int studentId);
+    List<Integer> getAttemptedSubjectsByStudent(int studentId);
 
     @Modifying
     @Query(value = "update score set score = score+? where student_id=? and subject_id=?", nativeQuery = true)
@@ -27,6 +27,9 @@ public interface ScoreRepository extends JpaRepository<Score, ScoreKey> {
 //    @Query(value = "select sum(s.score) from Score s where s.studentId = ?1")
     @Query(value = "select sum(score) from score where student_id = ?", nativeQuery = true)
     Integer getTotalScore(int studentId);
+
+    @Query(value = "select subject_id from score where subject_id=? and student_id=?", nativeQuery = true)
+    Integer isAttemptedSubject(int subjectId, int studentId);
 
 //    select s2_0.name from score s1_0 join subject s2_0 on s2_0.id=s1_0.subject_name where s1_0.student_id=? and s1_0.score=?
 }

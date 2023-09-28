@@ -3,7 +3,7 @@ package com.ria.acmetesting.controller;
 import com.ria.acmetesting.dbentities.Student;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
-import com.ria.acmetesting.exceptionhandling.*;
+import com.ria.acmetesting.exceptionhandling.exceptions.ExamHasEndedException;
 import com.ria.acmetesting.services.ACMETestServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +26,7 @@ public class ACMETestController {
 
     @GetMapping(value = "/subject")
     ResponseEntity<List<String>> getRemainingSubjects(@RequestParam int studentId) {
-        return new ResponseEntity<>(acmeTestService.getRemainingSubjects(studentId), HttpStatus.OK);
+        return new ResponseEntity<>(acmeTestService.getRemainingSubjectsOfStudent(studentId), HttpStatus.OK);
     }
 
     @PostMapping(value = "/subject")
@@ -36,14 +36,15 @@ public class ACMETestController {
     @GetMapping(value = "/subject/{subject}/test")
     ResponseEntity<QuestionDTO> startTest(@RequestParam int studentId, @PathVariable String subject)
     {
-        return new ResponseEntity<>(acmeTestService.starTest(studentId), HttpStatus.OK);
+        return new ResponseEntity<>(acmeTestService.starTest(studentId, subject), HttpStatus.OK);
     }
 
     @PostMapping(value = "/subject/{subject}/test")
     ResponseEntity<QuestionDTO> getNextQuestion(@RequestParam int studentId,
                                                 @RequestParam String selectedOption, @PathVariable String subject)
              {
-        QuestionDTO nextQuestion = acmeTestService.getNextQuestion(studentId, selectedOption);
+        QuestionDTO nextQuestion = acmeTestService.getNextQuestion(studentId, selectedOption, subject);
+        if(nextQuestion==null) throw new ExamHasEndedException();
         return new ResponseEntity<>(nextQuestion, HttpStatus.OK);
     }
     @GetMapping(value = "/score")

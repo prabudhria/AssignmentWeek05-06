@@ -3,7 +3,7 @@ create table question (
         answer varchar(255) not null,
         level integer not null,
         options varchar(255) not null,
-        statement varchar(255) not null,
+        statement varchar(255) not null unique,
         subject varchar(255) not null,
         primary key (id)
 );
@@ -21,14 +21,15 @@ create table student (
         age integer not null,
         current_subject varchar(255),
         current_level integer,
-        total_questions_attempted integer,
-        level_question_id integer[],
+        total_questions_attempted_of_subject integer,
+        all_level_question_ids integer[],
         primary key (id)
     );
 
 create table subject (
         id integer not null,
-        name varchar(255) unique,
+        name varchar(255) unique not null,
+        allowed_attempts integer not null,
         primary key (id)
     );
 

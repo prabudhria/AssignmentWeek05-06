@@ -7,10 +7,6 @@ import lombok.Setter;
 
 import java.util.Set;
 
-//import javax.persistence.*;
-import java.util.ArrayList;
-import java.util.Set;
-
 @Entity
 @Getter
 @Setter
@@ -20,6 +16,8 @@ public class Subject {
     private int id;
 
     String name;
+
+    int allowedAttempts;
 
     @OneToMany(mappedBy = "subject")
     Set<Score> score;

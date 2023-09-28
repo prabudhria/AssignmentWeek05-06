@@ -1,11 +1,7 @@
 package com.ria.acmetesting.controller;
 
 import com.ria.acmetesting.dbentities.Question;
-import com.ria.acmetesting.dbentities.Student;
 import com.ria.acmetesting.dbentities.Subject;
-import com.ria.acmetesting.exceptionhandling.QuestionNotFoundException;
-import com.ria.acmetesting.exceptionhandling.RequiredQuestionFieldNullException;
-import com.ria.acmetesting.exceptionhandling.SubjectNotFoundException;
 import com.ria.acmetesting.services.ACMETestServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,22 +15,46 @@ public class AdminController {
 
     @PostMapping(value = "/question")
     ResponseEntity<Question> addQuestion(@RequestBody Question question){
-        return new ResponseEntity<>(acmeTestService.addQuestion(question), HttpStatus.OK);
+        return new ResponseEntity<>(acmeTestService.addQuestion(question), HttpStatus.CREATED);
     }
-
     @GetMapping(value = "/question")
-    ResponseEntity<Question> getQuestion(@RequestParam int questionId) {
-        return new ResponseEntity<>(acmeTestService.getQuestion(questionId), HttpStatus.OK);
+    ResponseEntity<Question> getQuestionById(@RequestParam int questionId) {
+        return new ResponseEntity<>(acmeTestService.getQuestionById(questionId), HttpStatus.FOUND);
     }
-
-    @GetMapping(value = "/admin/subject")
-    ResponseEntity<Subject> getSubject(@RequestParam int subjectId){
-        return new ResponseEntity<>(acmeTestService.getSubject(subjectId), HttpStatus.OK);
+    @GetMapping(value = "/question/statement")
+    ResponseEntity<Question> getQuestionByStatement(@RequestParam String questionStatement) {
+        return new ResponseEntity<>(acmeTestService.getQuestionByStatement(questionStatement), HttpStatus.FOUND);
+    }
+    @PutMapping(value = "/question")
+    ResponseEntity<Question> updateQuestion(@RequestBody Question question){
+        return new ResponseEntity<>(acmeTestService.updateQuestion(question), HttpStatus.OK);
+    }
+    @DeleteMapping(value = "/question")
+    ResponseEntity<Object> deleteQuestion(@RequestParam int questionId) {
+        acmeTestService.deleteQuestion(questionId);
+        return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);
     }
 
     @PostMapping(value = "/admin/subject")
     ResponseEntity<Subject> addSubject(@RequestBody Subject subject){
-        return new ResponseEntity<>(acmeTestService.addSubject(subject), HttpStatus.OK);
+        return new ResponseEntity<>(acmeTestService.addSubject(subject), HttpStatus.CREATED);
+    }
+    @GetMapping(value = "/admin/subject")
+    ResponseEntity<Subject> getSubjectById(@RequestParam int subjectId){
+        return new ResponseEntity<>(acmeTestService.getSubjectById(subjectId), HttpStatus.FOUND);
+    }
+    @GetMapping(value = "/admin/subject/name")
+    ResponseEntity<Subject> getSubjectByName(@RequestParam String subjectName){
+        return new ResponseEntity<>(acmeTestService.getSubjectByName(subjectName), HttpStatus.FOUND);
+    }
+    @PutMapping(value = "/admin/subject")
+    ResponseEntity<Subject> updateSubject(@RequestBody Subject subject){
+        return new ResponseEntity<>(acmeTestService.updateSubject(subject), HttpStatus.OK);
+    }
+    @DeleteMapping(value = "/admin/subject")
+    ResponseEntity<Object> deleteSubject(@RequestParam int subjectId){
+        acmeTestService.deleteSubject(subjectId);
+        return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);
     }
 
 }

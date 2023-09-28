@@ -1,5 +1,6 @@
 package com.ria.acmetesting.exceptionhandling;
 
+import com.ria.acmetesting.exceptionhandling.exceptions.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> examEndedExceptionHandler(){
         return new ResponseEntity<>("The exam has ended", HttpStatus.BAD_REQUEST);
     }
-    @ExceptionHandler(value = StudentNameOrAgeNullException.class)
+    @ExceptionHandler(value = RequiredStudentFieldNullException.class)
     public ResponseEntity<Object> studentNameOrAgeNullExceptionHandler(){
         return new ResponseEntity<>("The Name or Age cannot be null", HttpStatus.BAD_REQUEST);
     }
@@ -40,6 +41,31 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     }
     @ExceptionHandler(value = QuestionNotFoundException.class)
     public ResponseEntity<Object> questionNotFoundExceptionHandler(){
-        return new ResponseEntity<>("Question not found", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>("Question not found", HttpStatus.NOT_FOUND);
     }
+    @ExceptionHandler(value = RequiredSubjectFieldNullException.class)
+    public ResponseEntity<Object> requiredSubjectFieldNullExceptionHandler(){
+        return new ResponseEntity<>("Subject name and allowed-attempts cannot be null", HttpStatus.BAD_REQUEST);
+    }
+    @ExceptionHandler(value = NoMoreQuestionsForTheSubjectException.class)
+    public ResponseEntity<Object> noMoreQuestionsForTheSubjectExceptionHandler(){
+        return new ResponseEntity<>("can't find more question for the subject", HttpStatus.NOT_FOUND);
+    }
+    @ExceptionHandler(value = NoQuestionsExistForTheSubjectException.class)
+    public ResponseEntity<Object> noQuestionsExistForTheSubjectExceptionHandler(){
+        return new ResponseEntity<>("can't find question for the subject", HttpStatus.NOT_FOUND);
+    }
+    @ExceptionHandler(value = WrongSubjectRequestedException.class)
+    public ResponseEntity<Object> wrongSubjectRequestedExceptionHandler(){
+        return new ResponseEntity<>("Wrong subject requested", HttpStatus.BAD_REQUEST);
+    }
+    @ExceptionHandler(value = TestAlreadyStartedException.class)
+    public ResponseEntity<Object> testAlreadyStartedExceptionHandler(){
+        return new ResponseEntity<>("The test has already started", HttpStatus.BAD_REQUEST);
+    }
+    @ExceptionHandler(value = SubjectNotSelectedException.class)
+    public ResponseEntity<Object> subjectNotSelectedExceptionHandler(){
+        return new ResponseEntity<>("Select the subject first", HttpStatus.BAD_REQUEST);
+    }
+
 }

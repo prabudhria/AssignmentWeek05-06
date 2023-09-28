@@ -1,6 +1,5 @@
 package com.ria.acmetesting.dbentities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,14 +22,14 @@ public class Student {
     private int age;
     private String currentSubject;
     private int currentLevel;
-    private int totalQuestionsAttempted;
-    private ArrayList<Integer> levelQuestionId = new ArrayList<>();
+    private int totalQuestionsAttemptedOfSubject;
+    private ArrayList<Integer> allLevelQuestionIds = new ArrayList<>();
 
     @OneToMany(mappedBy = "student")
     private Set<Score> score;
 
-    public void setLevelQuestionId(int questionId, int level){
-        this.levelQuestionId.set(level-1, questionId);
+    public void setAllLevelQuestionIds(int questionId, int level){
+        this.allLevelQuestionIds.set(level, questionId);
     }
 }
 
