@@ -16,7 +16,7 @@ public interface SubjectRepository extends JpaRepository<Subject, Integer> {
     List<Integer> getAllSubjectIds();
 
     @Query(value = "select s.id from Subject s where s.name=?1")
-    int getIdByName(String subject);
+    Integer getIdByName(String subject);
 
     @Query(value = "select s.allowedAttempts from Subject s where s.name = ?1")
     int getAttemptsAllowedOfSubject(String currentSubject);

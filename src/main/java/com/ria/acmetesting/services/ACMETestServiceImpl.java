@@ -5,6 +5,7 @@ import com.ria.acmetesting.dbentities.Student;
 import com.ria.acmetesting.dbentities.Subject;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
+import com.ria.acmetesting.exceptionhandling.exceptions.TestNotStartedException;
 import com.ria.acmetesting.exceptionhandling.exceptions.*;
 import com.ria.acmetesting.respositories.QuestionRepository;
 import com.ria.acmetesting.respositories.ScoreRepository;
@@ -36,19 +37,11 @@ public class ACMETestServiceImpl implements ACMETestService{
     @Transactional
     public StudentDTO saveStudent(Student student) {
         if(student.getName() == null || student.getAge()==0) throw new RequiredStudentFieldNullException();
-        studentRepository.save(student);
-        resetStudent(student.getId());
-        log.info(student.toString());
-        return new StudentDTO(studentRepository.findById(student.getId())
-                .orElseThrow(StudentNotFoundException::new));
+        Student initialisedStudent = resetStudent(student);
+        return new StudentDTO(studentRepository.save(initialisedStudent));
     }
 
 
-
-    @Override
-    public Integer getScore(int studentId) {
-        return scoreRepository.getTotalScore(studentId);
-    }
 
     @Override
     @Transactional
@@ -74,36 +67,34 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     @Override
     @Transactional
-    public QuestionDTO starTest(int studentId, String subject){
+    public QuestionDTO starTest(int studentId){
         Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
-        if(student.getCurrentSubject() == null) {
-            if (scoreRepository.isAttemptedSubject(subjectRepository.getIdByName(subject), studentId) == null)
-                throw new SubjectNotSelectedException();
-            else throw new ExamHasEndedException();
+        if(student.getCurrentSubject() == null) throw new SubjectNotSelectedException();
+        if(checkIfAllowed(student)){
+            if(student.getTotalQuestionsAttemptedOfSubject()==0){
+                Integer startingQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
+                        student.getCurrentSubject(), student.getAllLevelQuestionIds().get(1));
+                if(startingQuestionId==null) throw new NoQuestionsExistForTheSubjectException();
+
+                student.setLevelQuestionId(startingQuestionId, 1);
+                student.setTotalQuestionsAttemptedOfSubject(1);
+
+                studentRepository.save(student);
+                return new QuestionDTO(questionRepository.findById(startingQuestionId)
+                        .orElseThrow(QuestionNotFoundException::new));
+            }
+            else throw new TestAlreadyStartedException();
         }
-        if(student.getTotalQuestionsAttemptedOfSubject() != 0) throw new TestAlreadyStartedException();
-        if(!student.getCurrentSubject().equals(subject)) throw new WrongSubjectRequestedException();
 
-        //always starting test with level 1
-        Integer startingQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-                student.getCurrentSubject(), student.getAllLevelQuestionIds().get(1));
-        if(startingQuestionId==null) throw new NoQuestionsExistForTheSubjectException();
-
-        student.setAllLevelQuestionIds(startingQuestionId, 1);
-        student.setTotalQuestionsAttemptedOfSubject(1);
-
-        studentRepository.save(student);
-        return new QuestionDTO(questionRepository.findById(startingQuestionId)
-                .orElseThrow(QuestionNotFoundException::new));
+        else throw new ExamHasEndedException();
     }
 
     @Override
     @Transactional
-    public QuestionDTO getNextQuestion(int studentId, String selectedOption, String subject) {
+    public QuestionDTO getNextQuestion(int studentId, String selectedOption) {
         Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
 
-        if(!student.getCurrentSubject().equals(subject)) throw new WrongSubjectRequestedException();
-
+        if(student.getAllLevelQuestionIds().get(1)==0) throw new TestNotStartedException();
 
         if(!selectedOption.equals("a") && !selectedOption.equals("b")
                 && !selectedOption.equals("c") && !selectedOption.equals("d")) {
@@ -111,60 +102,77 @@ public class ACMETestServiceImpl implements ACMETestService{
         }
 
         Integer nextQuestionId=0;
-        int totalQuestionsAttemptedOfSubject = student.getTotalQuestionsAttemptedOfSubject();
-        String currentSubjectOfStudent = student.getCurrentSubject();
-        int maxLevel = questionRepository.getMaxQuestionLevelOfSubject(currentSubjectOfStudent);
-        int currentLevelOfStudent=student.getCurrentLevel();
-        int totalAllowedAttemptsOfSubject = subjectRepository.getAttemptsAllowedOfSubject(currentSubjectOfStudent);
 
-        if(evaluateAnswer(student, selectedOption)) {
-            if(totalQuestionsAttemptedOfSubject==totalAllowedAttemptsOfSubject){
-                resetStudent(studentId);
-                return null;
+        if(checkIfAllowed(student)){
+            if(isCorrectlyAnswer(student, selectedOption)){
+                nextQuestionId = nextQuestionIdIfCorrectAnswer(student);
             }
-
-            if(currentLevelOfStudent+1 > maxLevel) student.setCurrentLevel(1);
-            else student.setCurrentLevel(currentLevelOfStudent+1);
-
-            currentLevelOfStudent = student.getCurrentLevel();
-
-            if(currentLevelOfStudent < 1 || currentLevelOfStudent > maxLevel) throw new LevelDoesNotExistException();
-
-            nextQuestionId = questionRepository.getNextQuestionId(currentLevelOfStudent,
-                    currentSubjectOfStudent, student.getAllLevelQuestionIds().get(currentLevelOfStudent));
-            if(nextQuestionId==null) throw new NoMoreQuestionsForTheSubjectException();
-            student.setAllLevelQuestionIds(nextQuestionId, currentLevelOfStudent);
+            else nextQuestionId = nextQuestionIdIfIncorrectAnswer(student);
         }
-        else{
-            if(totalQuestionsAttemptedOfSubject==totalAllowedAttemptsOfSubject){
-                resetStudent(studentId);
-                return null;
-            }
-            student.setCurrentLevel(1);
-            nextQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
-                    student.getCurrentSubject(), student.getAllLevelQuestionIds().get(1));
-            if(nextQuestionId==null) throw new NoMoreQuestionsForTheSubjectException();
-            student.setAllLevelQuestionIds(nextQuestionId, 1);
-        }
+        else throw new ExamHasEndedException();
 
-        student.setTotalQuestionsAttemptedOfSubject(student.getTotalQuestionsAttemptedOfSubject()+1);
-        studentRepository.save(student);
         return new QuestionDTO(questionRepository.findById(nextQuestionId)
                 .orElseThrow(QuestionNotFoundException::new));
     }
 
-    @Transactional
-    private void resetStudent(int studentId) {
-        Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
-        student.setCurrentSubject(null);
-        student.setCurrentLevel(1);
-        student.setTotalQuestionsAttemptedOfSubject(0);
-        studentRepository.initializeQuestionLevelIds(student.getId());
-        studentRepository.save(student);
+    private boolean checkIfAllowed(Student student) {
+        return !(student.getTotalQuestionsAttemptedOfSubject() ==
+                subjectRepository.getAttemptsAllowedOfSubject(student.getCurrentSubject()));
     }
 
     @Transactional
-    private boolean evaluateAnswer(Student student, String selectedOption) {
+    private Integer nextQuestionIdIfIncorrectAnswer(Student student) {
+        student.setCurrentLevel(1);
+        Integer nextQuestionId = fetchNextQuestionId(1,
+                student.getCurrentSubject(), student.getAllLevelQuestionIds().get(1));
+
+        student.setLevelQuestionId(nextQuestionId, 1);
+        student.setTotalQuestionsAttemptedOfSubject(student.getTotalQuestionsAttemptedOfSubject()+1);
+
+        studentRepository.save(student);
+        return nextQuestionId;
+    }
+
+    @Transactional
+    private Integer nextQuestionIdIfCorrectAnswer(Student student) {
+        int currentLevelOfStudent=student.getCurrentLevel();
+        int maxLevel = questionRepository.getMaxQuestionLevelOfSubject(student.getCurrentSubject());
+
+
+        if(currentLevelOfStudent+1 > maxLevel) student.setCurrentLevel(1);
+        else student.setCurrentLevel(currentLevelOfStudent+1);
+
+        currentLevelOfStudent = student.getCurrentLevel();
+
+        if(currentLevelOfStudent < 1 || currentLevelOfStudent > maxLevel) throw new LevelDoesNotExistException();
+
+        Integer nextQuestionId = fetchNextQuestionId(currentLevelOfStudent, student.getCurrentSubject(),
+                student.getAllLevelQuestionIds().get(currentLevelOfStudent));
+
+        student.setLevelQuestionId(nextQuestionId, currentLevelOfStudent);
+        student.setTotalQuestionsAttemptedOfSubject(student.getTotalQuestionsAttemptedOfSubject()+1);
+
+        studentRepository.save(student);
+        return nextQuestionId;
+    }
+
+    private Integer fetchNextQuestionId(int currentLevel, String currentSubject, Integer currentLevelQuestionId) {
+        Integer nextQuestionId = questionRepository.getNextQuestionId(currentLevel,
+                currentSubject, currentLevelQuestionId);
+        if(nextQuestionId==null) throw new NoMoreQuestionsForTheSubjectException();
+        return nextQuestionId;
+    }
+
+    private Student resetStudent(Student student) {
+        student.setCurrentLevel(1);
+        student.setTotalQuestionsAttemptedOfSubject(0);
+        ArrayList<Integer> questionLevelIds = new ArrayList<>(Arrays.asList(-1, 0, 0, 0));
+        student.setAllLevelQuestionIds(questionLevelIds);
+        return student;
+    }
+
+    @Transactional
+    private boolean isCorrectlyAnswer(Student student, String selectedOption) {
         Question question = questionRepository.findById(getQuestionAnsweredId(student))
                 .orElseThrow(QuestionNotFoundException::new);
         if(selectedOption.equals(question.getAnswer())){
@@ -185,16 +193,17 @@ public class ACMETestServiceImpl implements ACMETestService{
     @Transactional
     public StudentDTO markSubject(int studentId, String subject) {
         Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
-        student.setCurrentSubject(subject);
-        int subjectId;
-        try{
-            subjectId = subjectRepository.getIdByName(subject);
+        Student resetStudent = resetStudent(student);
+        resetStudent.setCurrentSubject(subject);
+
+        Integer subjectId=subjectRepository.getIdByName(subject);
+
+        if(subjectId==null) throw new SubjectNotFoundException();
+        else {
+            scoreRepository.initializeStudentScore(studentId, subjectId, 0);
+            return new StudentDTO(studentRepository.save(resetStudent));
         }
-        catch (Exception e){
-            throw new SubjectNotFoundException();
-        }
-        scoreRepository.initializeStudentScore(studentId, subjectId, 0);
-        return new StudentDTO(studentRepository.save(student));
+
     }
 
     @Override
@@ -261,5 +270,10 @@ public class ACMETestServiceImpl implements ACMETestService{
     public void deleteSubject(int subjectId) {
         Subject subject = subjectRepository.findById(subjectId).orElseThrow(SubjectNotFoundException::new);
         subjectRepository.deleteById(subjectId);
+    }
+
+    @Override
+    public Integer getScore(int studentId) {
+        return scoreRepository.getTotalScore(studentId);
     }
 }

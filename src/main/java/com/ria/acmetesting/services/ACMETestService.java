@@ -16,9 +16,9 @@ public interface ACMETestService {
 
     List<String> getRemainingSubjectsOfStudent(int studentId) ;
 
-    QuestionDTO getNextQuestion(int studentId, String selectedOption, String subject);
+    QuestionDTO getNextQuestion(int studentId, String selectedOption);
 
-    QuestionDTO starTest(int studentId, String subject);
+    QuestionDTO starTest(int studentId);
 
     StudentDTO markSubject(int studentId, String subject);
 

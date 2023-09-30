@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@RequestMapping("user")
 @Slf4j
 public class ACMETestController {
 
@@ -33,17 +34,17 @@ public class ACMETestController {
     ResponseEntity<StudentDTO> markSubject(@RequestParam int studentId, @RequestParam String subject) {
         return new ResponseEntity<>(acmeTestService.markSubject(studentId, subject), HttpStatus.OK);
     }
-    @GetMapping(value = "/subject/{subject}/test")
-    ResponseEntity<QuestionDTO> startTest(@RequestParam int studentId, @PathVariable String subject)
+    @GetMapping(value = "/test")
+    ResponseEntity<QuestionDTO> startTest(@RequestParam int studentId)
     {
-        return new ResponseEntity<>(acmeTestService.starTest(studentId, subject), HttpStatus.OK);
+        return new ResponseEntity<>(acmeTestService.starTest(studentId), HttpStatus.OK);
     }
 
-    @PostMapping(value = "/subject/{subject}/test")
+    @PostMapping(value = "/test")
     ResponseEntity<QuestionDTO> getNextQuestion(@RequestParam int studentId,
-                                                @RequestParam String selectedOption, @PathVariable String subject)
+                                                @RequestParam String selectedOption)
              {
-        QuestionDTO nextQuestion = acmeTestService.getNextQuestion(studentId, selectedOption, subject);
+        QuestionDTO nextQuestion = acmeTestService.getNextQuestion(studentId, selectedOption);
         if(nextQuestion==null) throw new ExamHasEndedException();
         return new ResponseEntity<>(nextQuestion, HttpStatus.OK);
     }

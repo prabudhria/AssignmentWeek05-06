@@ -13,7 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(value = ExamHasEndedException.class)
     public ResponseEntity<Object> examEndedExceptionHandler(){
-        return new ResponseEntity<>("The exam has ended", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>("The exam has ended, please select next subject or finish", HttpStatus.BAD_REQUEST);
     }
     @ExceptionHandler(value = RequiredStudentFieldNullException.class)
     public ResponseEntity<Object> studentNameOrAgeNullExceptionHandler(){
@@ -66,6 +66,10 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(value = SubjectNotSelectedException.class)
     public ResponseEntity<Object> subjectNotSelectedExceptionHandler(){
         return new ResponseEntity<>("Select the subject first", HttpStatus.BAD_REQUEST);
+    }
+    @ExceptionHandler(value = TestNotStartedException.class)
+    public ResponseEntity<Object> testNotStartedExceptionHandler(){
+        return new ResponseEntity<>("Kindly start the test first", HttpStatus.BAD_REQUEST);
     }
 
 }

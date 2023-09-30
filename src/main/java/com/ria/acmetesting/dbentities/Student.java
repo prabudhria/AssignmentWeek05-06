@@ -28,7 +28,7 @@ public class Student {
     @OneToMany(mappedBy = "student")
     private Set<Score> score;
 
-    public void setAllLevelQuestionIds(int questionId, int level){
+    public void setLevelQuestionId(int questionId, int level){
         this.allLevelQuestionIds.set(level, questionId);
     }
 }

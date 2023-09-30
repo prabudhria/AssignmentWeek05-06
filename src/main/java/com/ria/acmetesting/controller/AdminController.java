@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@RequestMapping("admin")
 public class AdminController {
     @Autowired
     ACMETestServiceImpl acmeTestService;
@@ -35,23 +36,23 @@ public class AdminController {
         return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);
     }
 
-    @PostMapping(value = "/admin/subject")
+    @PostMapping(value = "/subject")
     ResponseEntity<Subject> addSubject(@RequestBody Subject subject){
         return new ResponseEntity<>(acmeTestService.addSubject(subject), HttpStatus.CREATED);
     }
-    @GetMapping(value = "/admin/subject")
+    @GetMapping(value = "/subject")
     ResponseEntity<Subject> getSubjectById(@RequestParam int subjectId){
         return new ResponseEntity<>(acmeTestService.getSubjectById(subjectId), HttpStatus.FOUND);
     }
-    @GetMapping(value = "/admin/subject/name")
+    @GetMapping(value = "/subject/name")
     ResponseEntity<Subject> getSubjectByName(@RequestParam String subjectName){
         return new ResponseEntity<>(acmeTestService.getSubjectByName(subjectName), HttpStatus.FOUND);
     }
-    @PutMapping(value = "/admin/subject")
+    @PutMapping(value = "/subject")
     ResponseEntity<Subject> updateSubject(@RequestBody Subject subject){
         return new ResponseEntity<>(acmeTestService.updateSubject(subject), HttpStatus.OK);
     }
-    @DeleteMapping(value = "/admin/subject")
+    @DeleteMapping(value = "/subject")
     ResponseEntity<Object> deleteSubject(@RequestParam int subjectId){
         acmeTestService.deleteSubject(subjectId);
         return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);

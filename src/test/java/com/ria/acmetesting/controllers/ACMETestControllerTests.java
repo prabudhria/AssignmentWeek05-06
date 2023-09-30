@@ -71,7 +71,7 @@ public class ACMETestControllerTests {
 
     @Test
     public void testRegister() throws Exception {
-        MockHttpServletResponse registrationResponse = mockMvc.perform(MockMvcRequestBuilders.post("/register")
+        MockHttpServletResponse registrationResponse = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(studentDTO)))
                 .andReturn().getResponse();
 
@@ -80,9 +80,15 @@ public class ACMETestControllerTests {
         assertThat(studentDTO).isEqualToComparingFieldByField(registeredStudent);
 
         StudentDTO nullFieldStudent = new StudentDTO(null, 21);
-        mockMvc.perform(MockMvcRequestBuilders
-                .post("/register").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(nullFieldStudent)))
-                .andExpect(result -> assertTrue(result.getResolvedException() instanceof RequiredStudentFieldNullException));
+        MockHttpServletResponse nullStudentResult = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(nullFieldStudent)))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andReturn().getResponse();
+        assertEquals( "The Name or Age cannot be null", nullStudentResult.getContentAsString());
+//        mockMvc.perform(MockMvcRequestBuilders
+//                .post("/register").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(nullFieldStudent)))
+//                .andExpect(result -> assertTrue(result.getResolvedException() instanceof RequiredStudentFieldNullException))
+//                .andExpect(result -> assertTrue((result.)));
     }
 //
 //    @Test
