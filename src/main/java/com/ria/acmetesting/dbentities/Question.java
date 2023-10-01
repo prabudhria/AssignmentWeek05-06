@@ -1,20 +1,16 @@
 package com.ria.acmetesting.dbentities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
-//import javax.persistence.*;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.Set;
 
 @Entity
 @Getter
 @Setter
 @ToString
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "question")
 public class Question {
     @Id

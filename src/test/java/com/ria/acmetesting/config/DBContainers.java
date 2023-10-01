@@ -5,7 +5,6 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 @TestConfiguration
 public class DBContainers extends PostgreSQLContainer<DBContainers> {
-//    private static final String IMAGE_VERSION = "postgres:9.6-2";
     private static final String IMAGE_VERSION = "postgres:13.10";
     private static DBContainers container;
 

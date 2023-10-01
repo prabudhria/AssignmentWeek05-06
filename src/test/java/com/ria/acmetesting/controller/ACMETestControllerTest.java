@@ -1,37 +1,19 @@
-package com.ria.acmetesting.controllers;
+package com.ria.acmetesting.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ria.acmetesting.config.DBContainers;
-import com.ria.acmetesting.dbentities.Question;
-import com.ria.acmetesting.dbentities.Student;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
-import com.ria.acmetesting.exceptionhandling.exceptions.RequiredQuestionFieldNullException;
-import com.ria.acmetesting.exceptionhandling.exceptions.RequiredStudentFieldNullException;
-import com.ria.acmetesting.exceptionhandling.exceptions.StudentNotFoundException;
-import com.ria.acmetesting.respositories.QuestionRepository;
-import com.ria.acmetesting.respositories.StudentRepository;
-import com.ria.acmetesting.services.ACMETestServiceImpl;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.event.annotation.BeforeTestClass;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
@@ -40,38 +22,30 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.shaded.com.google.common.collect.Maps;
 
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Testcontainers
-public class ACMETestControllerTests {
+public class ACMETestControllerTest {
 
     @ClassRule
     public static PostgreSQLContainer<DBContainers> postgreSQLContainer = DBContainers.getInstance();
     private MockMvc mockMvc;
-
     @Autowired
     WebApplicationContext webApplicationContext;
 
     ObjectMapper objectMapper;
     @BeforeEach
-    public void initializeStudentAndQuestion() throws Exception {
+    public void initializeObjectMapper(){
         objectMapper = new ObjectMapper();
         this.mockMvc = webAppContextSetup(webApplicationContext).build();
     }
