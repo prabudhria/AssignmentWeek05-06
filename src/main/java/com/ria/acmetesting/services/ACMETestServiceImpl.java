@@ -36,7 +36,10 @@ public class ACMETestServiceImpl implements ACMETestService{
     @Override
     @Transactional
     public StudentDTO saveStudent(Student student) {
-        if(student.getName() == null || student.getAge()==0) throw new RequiredStudentFieldNullException();
+        if(student.getName() == null
+                || student.getAge()==0
+                || student.getUsername()==null) throw new RequiredStudentFieldNullException();
+        else if (studentRepository.findUsername(student.getUsername())!=null) throw new UsernameAlreadyTakenException();
         Student initialisedStudent = resetStudent(student);
         return new StudentDTO(studentRepository.save(initialisedStudent));
     }
@@ -45,9 +48,9 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     @Override
     @Transactional
-    public List<String> getRemainingSubjectsOfStudent(int studentId){
-        studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
-        List<Integer> attemptedSubjects = scoreRepository.getAttemptedSubjectsByStudent(studentId);
+    public List<String> getRemainingSubjectsOfStudent(String studentUsername){
+        studentRepository.findByUsername(studentUsername).orElseThrow(StudentNotFoundException::new);
+        List<Integer> attemptedSubjects = scoreRepository.getAttemptedSubjectsByStudent(studentUsername);
 
         List<String> remainingSubjectNames = new ArrayList<>();
         List<Integer> allSubjects = subjectRepository.getAllSubjectIds();
@@ -67,32 +70,30 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     @Override
     @Transactional
-    public QuestionDTO starTest(int studentId){
-        Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
+    public QuestionDTO starTest(String studentUsername){
+        Student student = studentRepository.findByUsername(studentUsername).orElseThrow(StudentNotFoundException::new);
         if(student.getCurrentSubject() == null) throw new SubjectNotSelectedException();
-        if(checkIfAllowed(student)){
+        if(checkIfAllowedToContinueTest(student)){
             if(student.getTotalQuestionsAttemptedOfSubject()==0){
                 Integer startingQuestionId = questionRepository.getNextQuestionId(student.getCurrentLevel(),
                         student.getCurrentSubject(), student.getAllLevelQuestionIds().get(1));
                 if(startingQuestionId==null) throw new NoQuestionsExistForTheSubjectException();
 
                 student.setLevelQuestionId(startingQuestionId, 1);
-                student.setTotalQuestionsAttemptedOfSubject(1);
-
                 studentRepository.save(student);
+
                 return new QuestionDTO(questionRepository.findById(startingQuestionId)
                         .orElseThrow(QuestionNotFoundException::new));
             }
             else throw new TestAlreadyStartedException();
         }
-
-        else throw new ExamHasEndedException();
+        else throw new TestHasEndedException();
     }
 
     @Override
     @Transactional
-    public QuestionDTO getNextQuestion(int studentId, String selectedOption) {
-        Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
+    public void evalutateStudentAnswer(String studentUsername, String selectedOption) {
+        Student student = studentRepository.findByUsername(studentUsername).orElseThrow(StudentNotFoundException::new);
 
         if(student.getAllLevelQuestionIds().get(1)==0) throw new TestNotStartedException();
 
@@ -103,19 +104,33 @@ public class ACMETestServiceImpl implements ACMETestService{
 
         Integer nextQuestionId=0;
 
-        if(checkIfAllowed(student)){
-            if(isCorrectlyAnswer(student, selectedOption)){
+        if(checkIfAllowedToContinueTest(student)){
+            if(isCorrectlyAnswered(student, selectedOption)){
                 nextQuestionId = nextQuestionIdIfCorrectAnswer(student);
             }
             else nextQuestionId = nextQuestionIdIfIncorrectAnswer(student);
         }
-        else throw new ExamHasEndedException();
+        else throw new TestHasEndedException();
 
-        return new QuestionDTO(questionRepository.findById(nextQuestionId)
-                .orElseThrow(QuestionNotFoundException::new));
+        student.setNextQuestionId(nextQuestionId);
+        studentRepository.save(student);
     }
 
-    private boolean checkIfAllowed(Student student) {
+    @Transactional
+    @Override
+    public QuestionDTO getNextQuestion(String studentUsername) {
+        Student student = studentRepository.findByUsername(studentUsername).orElseThrow(StudentNotFoundException::new);
+
+        if(student.getAllLevelQuestionIds().get(1)==0) throw new TestNotStartedException();
+
+        if(checkIfAllowedToContinueTest(student)) {
+            int nextQuestionId = student.getNextQuestionId();
+            return new QuestionDTO(questionRepository.findById(nextQuestionId).orElseThrow(QuestionNotFoundException::new));
+        }
+        else throw new TestHasEndedException();
+    }
+
+    private boolean checkIfAllowedToContinueTest(Student student) {
         return !(student.getTotalQuestionsAttemptedOfSubject() ==
                 subjectRepository.getAttemptsAllowedOfSubject(student.getCurrentSubject()));
     }
@@ -166,13 +181,13 @@ public class ACMETestServiceImpl implements ACMETestService{
     private Student resetStudent(Student student) {
         student.setCurrentLevel(1);
         student.setTotalQuestionsAttemptedOfSubject(0);
-        ArrayList<Integer> questionLevelIds = new ArrayList<>(Arrays.asList(-1, 0, 0, 0));
-        student.setAllLevelQuestionIds(questionLevelIds);
+        student.setNextQuestionId(0);
+        student.setAllLevelQuestionIds(new ArrayList<>(Arrays.asList(-1, 0, 0, 0)));
         return student;
     }
 
     @Transactional
-    private boolean isCorrectlyAnswer(Student student, String selectedOption) {
+    private boolean isCorrectlyAnswered(Student student, String selectedOption) {
         Question question = questionRepository.findById(getQuestionAnsweredId(student))
                 .orElseThrow(QuestionNotFoundException::new);
         if(selectedOption.equals(question.getAnswer())){
@@ -191,8 +206,13 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     @Override
     @Transactional
-    public StudentDTO markSubject(int studentId, String subject) {
-        Student student = studentRepository.findById(studentId).orElseThrow(StudentNotFoundException::new);
+    public void markSubject(String studentUsername, String subject) {
+        Student student = studentRepository.findByUsername(studentUsername).orElseThrow(StudentNotFoundException::new);
+
+        if(student.getCurrentSubject()!=null){
+            if (checkIfAllowedToContinueTest(student)) throw new PreviousTestNotFinishedException();
+        }
+
         Student resetStudent = resetStudent(student);
         resetStudent.setCurrentSubject(subject);
 
@@ -200,8 +220,9 @@ public class ACMETestServiceImpl implements ACMETestService{
 
         if(subjectId==null) throw new SubjectNotFoundException();
         else {
-            scoreRepository.initializeStudentScore(studentId, subjectId, 0);
-            return new StudentDTO(studentRepository.save(resetStudent));
+            scoreRepository.initializeStudentScore(studentRepository.getIdByUsername(studentUsername),
+                    subjectId, 0);
+            studentRepository.save(resetStudent);
         }
 
     }
@@ -273,7 +294,14 @@ public class ACMETestServiceImpl implements ACMETestService{
     }
 
     @Override
-    public Integer getScore(int studentId) {
-        return scoreRepository.getTotalScore(studentId);
+    public Integer getScore(String studentUsername) {
+        Student student = studentRepository.findByUsername(studentUsername).orElseThrow(StudentNotFoundException::new);
+        if(student.getTotalQuestionsAttemptedOfSubject()
+                ==subjectRepository.getAttemptsAllowedOfSubject(student.getCurrentSubject())){
+
+        }
+        Integer totalScore = scoreRepository.getTotalScore(studentRepository.getIdByUsername(studentUsername));
+        if(totalScore==null) return 0;
+        else return totalScore;
     }
 }

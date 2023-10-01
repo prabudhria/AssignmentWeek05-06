@@ -11,10 +11,12 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentDTO {
+    private String username;
     private String name;
     private int age;
 
     public StudentDTO(Student student){
+        this.username = student.getUsername();
         this.name = student.getName();
         this.age = student.getAge();
     }

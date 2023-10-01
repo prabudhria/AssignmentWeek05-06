@@ -1,3 +1,8 @@
-create sequence question_seq start with 1 increment by 50;
-create sequence student_seq start with 1 increment by 50;
-create sequence subject_seq start with 1 increment by 50;
+DROP SEQUENCE IF EXISTS question_seq;
+CREATE SEQUENCE question_seq START WITH 1 INCREMENT by 1;
+
+DROP SEQUENCE IF EXISTS student_seq;
+CREATE SEQUENCE student_seq START WITH 1 INCREMENT by 1;
+
+DROP SEQUENCE IF EXISTS subject_seq;
+CREATE SEQUENCE subject_seq START WITH 1 INCREMENT by 1;

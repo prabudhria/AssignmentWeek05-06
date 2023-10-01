@@ -11,13 +11,13 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @ControllerAdvice
 @Slf4j
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
-    @ExceptionHandler(value = ExamHasEndedException.class)
+    @ExceptionHandler(value = TestHasEndedException.class)
     public ResponseEntity<Object> examEndedExceptionHandler(){
-        return new ResponseEntity<>("The exam has ended, please select next subject or finish", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>("The test has ended, please select next subject or finish", HttpStatus.BAD_REQUEST);
     }
     @ExceptionHandler(value = RequiredStudentFieldNullException.class)
     public ResponseEntity<Object> studentNameOrAgeNullExceptionHandler(){
-        return new ResponseEntity<>("The Name or Age cannot be null", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>("The name, age or username cannot be null", HttpStatus.BAD_REQUEST);
     }
     @ExceptionHandler(value = StudentNotFoundException.class)
     public ResponseEntity<Object> studentNotFoundExceptionHandler(){
@@ -49,11 +49,11 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     }
     @ExceptionHandler(value = NoMoreQuestionsForTheSubjectException.class)
     public ResponseEntity<Object> noMoreQuestionsForTheSubjectExceptionHandler(){
-        return new ResponseEntity<>("can't find more question for the subject", HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>("Can't find more question for the subject", HttpStatus.NOT_FOUND);
     }
     @ExceptionHandler(value = NoQuestionsExistForTheSubjectException.class)
     public ResponseEntity<Object> noQuestionsExistForTheSubjectExceptionHandler(){
-        return new ResponseEntity<>("can't find question for the subject", HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>("Can't find question for the subject", HttpStatus.NOT_FOUND);
     }
     @ExceptionHandler(value = WrongSubjectRequestedException.class)
     public ResponseEntity<Object> wrongSubjectRequestedExceptionHandler(){
@@ -70,6 +70,15 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(value = TestNotStartedException.class)
     public ResponseEntity<Object> testNotStartedExceptionHandler(){
         return new ResponseEntity<>("Kindly start the test first", HttpStatus.BAD_REQUEST);
+    }
+    @ExceptionHandler(value = UsernameAlreadyTakenException.class)
+    public ResponseEntity<Object> usernameAlreadyTakenExceptionHandler(){
+        return new ResponseEntity<>("This username has already been taken, kindly try another username",
+                HttpStatus.NOT_ACCEPTABLE);
+    }
+    @ExceptionHandler(value = PreviousTestNotFinishedException.class)
+    public ResponseEntity<Object> previousTestNotFinishedExceptionHandler(){
+        return new ResponseEntity<>("Kindly finish the previous test first", HttpStatus.BAD_REQUEST);
     }
 
 }

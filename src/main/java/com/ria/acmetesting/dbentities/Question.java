@@ -18,12 +18,13 @@ import java.util.Set;
 @Table(name = "question")
 public class Question {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "question_generator")
+    @SequenceGenerator(name = "question_generator", sequenceName = "question_seq", allocationSize = 1)
     private int id;
     private int level;
     private String statement;
     private String subject;
     private String answer;
-    private String options;
+    private ArrayList<String> options = new ArrayList<>();
 
 }

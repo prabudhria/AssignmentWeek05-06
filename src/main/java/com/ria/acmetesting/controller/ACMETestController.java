@@ -3,7 +3,6 @@ package com.ria.acmetesting.controller;
 import com.ria.acmetesting.dbentities.Student;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
-import com.ria.acmetesting.exceptionhandling.exceptions.ExamHasEndedException;
 import com.ria.acmetesting.services.ACMETestServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,30 +25,35 @@ public class ACMETestController {
     }
 
     @GetMapping(value = "/subject")
-    ResponseEntity<List<String>> getRemainingSubjects(@RequestParam int studentId) {
-        return new ResponseEntity<>(acmeTestService.getRemainingSubjectsOfStudent(studentId), HttpStatus.OK);
+    ResponseEntity<List<String>> getRemainingSubjects(@RequestParam String studentUsername) {
+        return new ResponseEntity<>(acmeTestService.getRemainingSubjectsOfStudent(studentUsername), HttpStatus.OK);
     }
 
     @PostMapping(value = "/subject")
-    ResponseEntity<StudentDTO> markSubject(@RequestParam int studentId, @RequestParam String subject) {
-        return new ResponseEntity<>(acmeTestService.markSubject(studentId, subject), HttpStatus.OK);
+    ResponseEntity<Object> markSubject(@RequestParam String studentUsername, @RequestParam String subject) {
+        acmeTestService.markSubject(studentUsername, subject);
+        return new ResponseEntity<>("Subject \"" + subject + "\" is selected successfully", HttpStatus.OK);
     }
-    @GetMapping(value = "/test")
-    ResponseEntity<QuestionDTO> startTest(@RequestParam int studentId)
+    @GetMapping(value = "/starttest")
+    ResponseEntity<QuestionDTO> startTest(@RequestParam String studentUsername)
     {
-        return new ResponseEntity<>(acmeTestService.starTest(studentId), HttpStatus.OK);
+        return new ResponseEntity<>(acmeTestService.starTest(studentUsername), HttpStatus.OK);
     }
 
     @PostMapping(value = "/test")
-    ResponseEntity<QuestionDTO> getNextQuestion(@RequestParam int studentId,
-                                                @RequestParam String selectedOption)
-             {
-        QuestionDTO nextQuestion = acmeTestService.getNextQuestion(studentId, selectedOption);
-        if(nextQuestion==null) throw new ExamHasEndedException();
+    ResponseEntity<Object> evaluateStudentAnswer(@RequestParam String studentUsername,
+                                                 @RequestParam String selectedOption) {
+        acmeTestService.evalutateStudentAnswer(studentUsername, selectedOption);
+        return new ResponseEntity<>("Answer evaluated successfully", HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/test")
+    ResponseEntity<QuestionDTO> getNextQuestion(@RequestParam String studentUsername) {
+        QuestionDTO nextQuestion = acmeTestService.getNextQuestion(studentUsername);
         return new ResponseEntity<>(nextQuestion, HttpStatus.OK);
     }
     @GetMapping(value = "/score")
-    ResponseEntity<Integer> getScore(@RequestParam int studentId){
-        return new ResponseEntity<>(acmeTestService.getScore(studentId), HttpStatus.OK);
+    ResponseEntity<Integer> getScore(@RequestParam String studentUsername){
+        return new ResponseEntity<>(acmeTestService.getScore(studentUsername), HttpStatus.OK);
     }
 }

@@ -12,15 +12,15 @@ public interface ACMETestService {
 
     StudentDTO saveStudent(Student student);
 
-    Integer getScore(int studentId);
+    Integer getScore(String studentUsername);
 
-    List<String> getRemainingSubjectsOfStudent(int studentId) ;
+    List<String> getRemainingSubjectsOfStudent(String studentUsername) ;
 
-    QuestionDTO getNextQuestion(int studentId, String selectedOption);
+    void evalutateStudentAnswer(String studentUsername, String selectedOption);
 
-    QuestionDTO starTest(int studentId);
+    QuestionDTO starTest(String studentUsername);
 
-    StudentDTO markSubject(int studentId, String subject);
+    void markSubject(String studentUsername, String subject);
 
     Question addQuestion(Question question);
 
@@ -41,4 +41,6 @@ public interface ACMETestService {
     Subject updateSubject(Subject subject);
 
     void deleteSubject(int subjectId);
+
+    QuestionDTO getNextQuestion(String studentUsername);
 }

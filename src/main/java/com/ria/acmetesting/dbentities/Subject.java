@@ -12,7 +12,8 @@ import java.util.Set;
 @Setter
 public class Subject {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "subject_generator")
+    @SequenceGenerator(name = "subject_generator", sequenceName = "subject_seq", allocationSize = 1)
     private int id;
 
     String name;

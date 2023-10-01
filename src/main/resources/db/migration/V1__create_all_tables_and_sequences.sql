@@ -1,45 +1,51 @@
-create table question (
-        id integer not null,
-        answer varchar(255) not null,
-        level integer not null,
-        options varchar(255) not null,
-        statement varchar(255) not null unique,
-        subject varchar(255) not null,
-        primary key (id)
+DROP TABLE IF EXISTS question;
+CREATE TABLE question (
+        id INTEGER NOT NULL,
+        answer VARCHAR(255) NOT NULL,
+        level INTEGER NOT NULL,
+        options VARCHAR[] NOT NULL,
+        statement VARCHAR(255) NOT NULL UNIQUE,
+        subject VARCHAR(255) NOT NULL,
+        PRIMARY KEY(id)
 );
 
-create table score (
-        student_id integer not null ,
-        subject_id integer not null,
-        score integer not null,
-        primary key (student_id, subject_id)
+DROP TABLE IF EXISTS score;
+CREATE TABLE score (
+        student_id INTEGER NOT NULL ,
+        subject_id INTEGER NOT NULL,
+        score INTEGER NOT NULL,
+        PRIMARY KEY(student_id, subject_id)
     );
 
-create table student (
-        id integer not null ,
-        name varchar(255) not null,
-        age integer not null,
-        current_subject varchar(255),
-        current_level integer,
-        total_questions_attempted_of_subject integer,
-        all_level_question_ids integer[],
-        primary key (id)
+DROP TABLE IF EXISTS student;
+CREATE TABLE student (
+        id INTEGER NOT NULL ,
+        username VARCHAR(255) NOT NULL UNIQUE,
+        name VARCHAR(255) NOT NULL,
+        age INTEGER NOT NULL,
+        current_subject VARCHAR(255),
+        current_level INTEGER,
+        total_questions_attempted_of_subject INTEGER,
+        next_question_id INTEGER,
+        all_level_question_ids INTEGER[],
+        PRIMARY KEY (id)
     );
 
-create table subject (
-        id integer not null,
-        name varchar(255) unique not null,
-        allowed_attempts integer not null,
-        primary key (id)
+DROP TABLE IF EXISTS subject;
+CREATE TABLE subject (
+        id INTEGER NOT NULL,
+        name VARCHAR(255) UNIQUE NOT NULL,
+        allowed_attempts INTEGER NOT NULL,
+        PRIMARY KEY (id)
     );
 
 
-alter table if exists score
-       add constraint student_score_fk
-       foreign key (student_id)
-       references student;
+ALTER TABLE IF EXISTS score
+       ADD CONSTRAINT student_score_fk
+       FOREIGN KEY (student_id)
+       REFERENCES student;
 
-alter table if exists score
-       add constraint subject_score_fk
-       foreign key (subject_id)
-       references subject;
+ALTER TABLE IF EXISTS score
+       ADD CONSTRAINT subject_score_fk
+       FOREIGN KEY (subject_id)
+       REFERENCES subject;
