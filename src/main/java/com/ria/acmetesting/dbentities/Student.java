@@ -27,7 +27,7 @@ public class Student {
     private int nextQuestionId;
     private ArrayList<Integer> allLevelQuestionIds = new ArrayList<>();
 
-    @OneToMany(mappedBy = "student")
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL)
     private Set<Score> score;
 
     public void setLevelQuestionId(int questionId, int level){

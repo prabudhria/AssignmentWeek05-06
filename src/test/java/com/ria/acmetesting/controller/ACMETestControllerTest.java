@@ -3,11 +3,12 @@ package com.ria.acmetesting.controller;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ria.acmetesting.config.DBContainers;
-import com.ria.acmetesting.dbentities.Question;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
-import com.ria.acmetesting.respositories.QuestionRepository;
+import com.ria.acmetesting.respositories.StudentRepository;
+import com.ria.acmetesting.respositories.SubjectRepository;
 import org.junit.ClassRule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -45,75 +46,80 @@ public class ACMETestControllerTest {
     @Autowired
     WebApplicationContext webApplicationContext;
 
+    @Autowired
+    StudentRepository studentRepository;
+    @Autowired
+    SubjectRepository subjectRepository;
     ObjectMapper objectMapper;
+    StudentDTO student;
+    MockHttpServletResponse response;
+    MultiValueMap<String , String> params;
     @BeforeEach
-    public void initializeObjectMapper(){
-        objectMapper = new ObjectMapper();
+    public void initialization() throws Exception{
         this.mockMvc = webAppContextSetup(webApplicationContext).build();
+        objectMapper = new ObjectMapper();
+        student = new StudentDTO( "testUsername","testName", 21);
+        params = new LinkedMultiValueMap<>();
+        params.add("studentUsername", "testUsername");
+        response = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(student)))
+                .andReturn().getResponse();
+
     }
 
-//    givenInvalidUserDetails_whenRegisterUserIsCalled_thenBadRequestIsThrown
+    @AfterEach
+    public void removeObjects(){
+        studentRepository.findByUsername(student.getUsername()).ifPresent(value -> studentRepository.delete(value));
+        params.clear();
+    }
+
+    //    givenInvalidUserDetails_whenRegisterUserIsCalled_thenBadRequestIsThrown
     @Test
-    public void testRegister() throws Exception {
-        StudentDTO studentDTO = new StudentDTO();
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(studentDTO)))
+    public void givenValidDetails_whenRegisterIsCalled_thenIsCreatedIsThrown() throws Exception {
+        assertEquals(201, response.getStatus());
+        StudentDTO responseStudent = objectMapper.readValue(response.getContentAsString(), StudentDTO.class);
+        assertThat(student).isEqualToComparingFieldByField(responseStudent);
+
+    }
+    @Test
+    public void givenInvalidStudentDetails_whenRegisterIsCalled_thenBadRequestIsThrown() throws Exception{
+        StudentDTO nullFieldStudent = new StudentDTO();
+        response = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(nullFieldStudent)))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
         assertEquals( "The name, age or username cannot be null", response.getContentAsString());
-
-        studentDTO = new StudentDTO( "firstUsername","name", 21);
+    }
+    @Test
+    public void givenAlreadyUsedUsername_whenRegisterIsCalled_thenNotAcceptableIsThrown() throws Exception{
+        StudentDTO studentWithSameUsername = new StudentDTO( "testUsername","testSecondName", 21);
         response = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(studentDTO)))
-                .andExpect(MockMvcResultMatchers.status().isCreated())
-                .andReturn().getResponse();
-        StudentDTO registeredStudent = objectMapper.readValue(response.getContentAsString(), StudentDTO.class);
-        assertThat(studentDTO).isEqualToComparingFieldByField(registeredStudent);
-
-        studentDTO = new StudentDTO( "firstUsername","nameWithSameUsername", 21);
-        response = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(studentDTO)))
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(studentWithSameUsername)))
                 .andExpect(MockMvcResultMatchers.status().isNotAcceptable())
                 .andReturn().getResponse();
         assertEquals( "This username has already been taken, kindly try another username", response.getContentAsString());
 
-//        mockMvc.perform(MockMvcRequestBuilders
-//                .post("/register").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(nullFieldStudent)))
-//                .andExpect(result -> assertTrue(result.getResolvedException() instanceof RequiredStudentFieldNullException))
-//                .andExpect(result -> assertTrue((result.)));
     }
     @Test
     public void testGetRemainingSubjects() throws Exception {
-        StudentDTO studentDTO = new StudentDTO("secondUsername", "name", 22);
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/register").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(studentDTO)));
         List<String> sampleSubject = new ArrayList<>(List.of("Maths", "Science"));
-        MultiValueMap<String , String> params = new LinkedMultiValueMap<>();
-        params.add("studentUsername", "secondUsername");
         params.add("subject", "English");
 
         mockMvc.perform(MockMvcRequestBuilders.post("/user/subject").params(params));
 
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.get("/user/subject").param("studentUsername", "secondUsername"))
+        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/subject").param("studentUsername", "testUsername"))
                 .andReturn().getResponse();
         List<String> receivedSubjectList = objectMapper.readValue(response.getContentAsString(),
-                new TypeReference<List<String>>() {});
+                new TypeReference<>() {});
 
         assertEquals(200, response.getStatus());
         assertEquals(sampleSubject, receivedSubjectList);
-
-
     }
 
     @Test
     public void testMarkSubject() throws Exception {
-        StudentDTO studentDTO = new StudentDTO("thirdUsername", "name", 22);
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/register").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(studentDTO)));
-        MultiValueMap<String , String> params = new LinkedMultiValueMap<>();
-        params.add("studentUsername", "thirdUsername");
         params.add("subject", "Maths");
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.post("/user/subject").params(params))
+        response = mockMvc.perform(MockMvcRequestBuilders.post("/user/subject").params(params))
                 .andReturn().getResponse();
 
         assertEquals(200, response.getStatus());
@@ -122,24 +128,20 @@ public class ACMETestControllerTest {
     }
 
     @Test
-    public void testStartTest() throws Exception {
-        StudentDTO studentDTO = new StudentDTO("fourthUsername", "name", 22);
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/register").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(studentDTO)));
-        MultiValueMap<String , String> params = new LinkedMultiValueMap<>();
-        params.add("studentUsername", "fourthUsername");
-        params.add("subject", "Maths");
-
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "fourthUsername"))
+    public void givenSubjectNotSelected_whenStartTestIsCalled_thenThrowBadRequest() throws Exception {
+        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
-
         assertEquals("Select the subject first", response.getContentAsString());
+    }
 
+    @Test
+    public void givenTestAlreadyStarted_whenStartTestIsCalled_thenThrowBadRequest() throws Exception{
+        params.add("subject", "Maths");
 
         mockMvc.perform(MockMvcRequestBuilders.post("/user/subject").params(params));
 
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "fourthUsername"))
+        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andReturn().getResponse();
 
@@ -151,19 +153,27 @@ public class ACMETestControllerTest {
         params.remove("subject");
         params.add("selectedOption", "d");
         mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params));
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "fourthUsername"))
+        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
-
-
         assertEquals("The test has already started", response.getContentAsString());
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params));
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params));
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params));
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params));
+    }
 
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "fourthUsername"))
+    @Test
+    public void givenTestHasEnded_whenStartTestIsCalled_thenThrowBadRequest() throws Exception {
+        params.add("subject", "Maths");
+        mockMvc.perform(MockMvcRequestBuilders.post("/user/subject").params(params));
+        mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "testUsername"))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        params.remove("subject");
+        params.add("selectedOption", "d");
+        int allowedAttempts = subjectRepository.getAttemptsAllowedOfSubject("Maths");
+        while(allowedAttempts!=0){
+            mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params));
+            allowedAttempts--;
+        }
+        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
 
@@ -172,56 +182,48 @@ public class ACMETestControllerTest {
     }
 
     @Test
-    public void testEvaluateStudentAnswer() throws Exception {
-        StudentDTO studentDTO = new StudentDTO("fifthUsername", "name", 22);
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/register").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(studentDTO)));
-        MultiValueMap<String , String> params = new LinkedMultiValueMap<>();
-        params.add("studentUsername", "fifthUsername");
+    public void givenTestNotStarted_whenEvaluateAnswerIsCalled_thenThrowBadRequest() throws Exception{
         params.add("selectedOption", "d");
 
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
+        response = mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
-
         assertEquals("Kindly start the test first", response.getContentAsString());
 
-        params.remove("selectedOption");
+    }
+    @Test
+    public void testEvaluateStudentAnswer() throws Exception {
         params.add("subject", "Maths");
         mockMvc.perform(MockMvcRequestBuilders.post("/user/subject").params(params))
                 .andExpect(MockMvcResultMatchers.status().isOk());
-        mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "fifthUsername"))
+        mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         params.remove("subject");
         params.add("selectedOption", "d");
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andReturn().getResponse();
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/test").param("studentUsername", "fifthUsername"))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andReturn().getResponse();
-
-        QuestionDTO expectedQuestion = new QuestionDTO("What is 2*5", new ArrayList<>(List.of("2", "4", "10", "15")));
-        QuestionDTO receivedQuestion = objectMapper.readValue(response.getContentAsString(), QuestionDTO.class);
-
-        assertThat(expectedQuestion).isEqualToComparingFieldByField(receivedQuestion);
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk());
         response = mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.status().isOk())
                 .andReturn().getResponse();
+        assertEquals("Answer evaluated successfully", response.getContentAsString());
 
-        assertEquals("The test has ended, please select next subject or finish", response.getContentAsString());
+    }
 
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "fifthUsername"))
+    @Test
+    public void givenTestHasEnded_whenGetNextQuestionIsCalled_thenThrowBadRequest() throws Exception{
+        params.add("subject", "Maths");
+        mockMvc.perform(MockMvcRequestBuilders.post("/user/subject").params(params))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "testUsername"))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        params.remove("subject");
+        params.add("selectedOption", "d");
+
+        int allowedAttempts = subjectRepository.getAttemptsAllowedOfSubject("Maths");
+        while(allowedAttempts!=0){
+            mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params));
+            allowedAttempts--;
+        }
+        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/test").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
 
@@ -229,32 +231,17 @@ public class ACMETestControllerTest {
     }
     @Test
     public void testGetNextQuestion() throws Exception {
-        StudentDTO studentDTO = new StudentDTO("sixthUsername", "name", 22);
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/register").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(studentDTO)));
-        MultiValueMap<String , String> params = new LinkedMultiValueMap<>();
-        params.add("studentUsername", "sixthUsername");
-        params.add("selectedOption", "d");
-
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.get("/user/test").param("studentUsername", "sixthUsername"))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andReturn().getResponse();
-
-        assertEquals("Kindly start the test first", response.getContentAsString());
-
-        params.remove("selectedOption");
         params.add("subject", "Maths");
         mockMvc.perform(MockMvcRequestBuilders.post("/user/subject").params(params))
                 .andExpect(MockMvcResultMatchers.status().isOk());
-        mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "sixthUsername"))
+        mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         params.remove("subject");
         params.add("selectedOption", "d");
         mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andReturn().getResponse();
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/test").param("studentUsername", "sixthUsername"))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/test").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andReturn().getResponse();
 
@@ -262,34 +249,15 @@ public class ACMETestControllerTest {
         QuestionDTO receivedQuestion = objectMapper.readValue(response.getContentAsString(), QuestionDTO.class);
 
         assertThat(expectedQuestion).isEqualToComparingFieldByField(receivedQuestion);
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/test").param("studentUsername", "sixthUsername"))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andReturn().getResponse();
-
-        assertEquals("The test has ended, please select next subject or finish", response.getContentAsString());
     }
 
     @Test
     public void testGetScore() throws Exception {
-        StudentDTO studentDTO = new StudentDTO("seventhUsername", "name", 22);
-        mockMvc.perform(MockMvcRequestBuilders.post("/user/register").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(studentDTO)));
-        MultiValueMap<String , String> params = new LinkedMultiValueMap<>();
-        params.add("studentUsername", "seventhUsername");
         params.add("subject", "Maths");
 
         mockMvc.perform(MockMvcRequestBuilders.post("/user/subject").params(params))
                 .andExpect(MockMvcResultMatchers.status().isOk());
-        mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "seventhUsername"))
+        mockMvc.perform(MockMvcRequestBuilders.get("/user/starttest").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
         params.remove("subject");
@@ -310,7 +278,7 @@ public class ACMETestControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/user/test").params(params))
                 .andExpect(MockMvcResultMatchers.status().isOk());
 
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.get("/user/score").param("studentUsername", "seventhUsername"))
+        response = mockMvc.perform(MockMvcRequestBuilders.get("/user/score").param("studentUsername", "testUsername"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andReturn().getResponse();
 

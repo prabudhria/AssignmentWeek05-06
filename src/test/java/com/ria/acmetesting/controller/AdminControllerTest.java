@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ria.acmetesting.config.DBContainers;
 import com.ria.acmetesting.dbentities.*;
 import com.ria.acmetesting.respositories.QuestionRepository;
-import org.aspectj.weaver.patterns.TypePatternQuestions;
+import com.ria.acmetesting.respositories.SubjectRepository;
 import org.junit.ClassRule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -17,7 +18,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -25,7 +25,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,214 +43,244 @@ class AdminControllerTest {
 
     @Autowired
     QuestionRepository questionRepository;
+    @Autowired
+    SubjectRepository subjectRepository;
     ObjectMapper objectMapper;
+    Question question;
+    Subject subject;
+    MockHttpServletResponse questionResponse;
+    MockHttpServletResponse subjectResponse;
+
     @BeforeEach
-    public void initializeObjectMapper(){
+    public void initializeObjectMapper() throws Exception {
         objectMapper = new ObjectMapper();
         this.mockMvc = webAppContextSetup(webApplicationContext).build();
+        question = new Question(1, "What is 6+7", "Maths",
+                new ArrayList<>(List.of("3", "5", "13", "17")), "c");
+        subject = new Subject("Logic", 5, new HashSet<>());
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.post("/admin/question")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(question)))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andReturn().getResponse();
+        subjectResponse = mockMvc.perform(MockMvcRequestBuilders.post("/admin/subject")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(subject)))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andReturn().getResponse();
     }
+
+    @AfterEach
+    public void removeObjects() {
+        questionRepository.findQuestionByStatement("What is 6+7")
+                .ifPresent(value -> questionRepository.delete(value));
+        subjectRepository.findSubjectByName("Logic")
+                .ifPresent(value -> subjectRepository.delete(value));
+    }
+
     @Test
-    void addQuestion() throws Exception{
-        Question question = new Question();
-        MockHttpServletResponse  response = mockMvc.perform(MockMvcRequestBuilders.post("/admin/question")
+    public void givenAnyNullQuestionField_whenAddQuestionIsCalled_thenBadRequestIsThrown() throws Exception {
+        question = new Question();
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.post("/admin/question")
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(question)))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
+        assertEquals("Question statement, subject, options and answer cannot be null", questionResponse.getContentAsString());
+    }
 
-        assertEquals("Question statement, subject, options and answer cannot be null", response.getContentAsString());
-
-        question = new Question(1, "What is 6+7", "Maths",
-                new ArrayList<>(List.of("3", "5", "13", "17")), "c");
-        response = mockMvc.perform(MockMvcRequestBuilders.post("/admin/question")
-                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(question)))
-                .andExpect(MockMvcResultMatchers.status().isCreated())
+    @Test
+    void givenSubjectNotExist_whenAddQuestionIsCalled_thenIsNotFoundIsThrown() throws Exception {
+        Question questionWithWrongSubject = new Question(1, "Which is the tallest builind in the world", "GK",
+                new ArrayList<>(List.of("Burj Khalifa", "Shanghai Tower", "Makkah Royal Clock Tower", "Ping An Finance Centre")), "a");
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.post("/admin/question")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(questionWithWrongSubject)))
+                .andExpect(MockMvcResultMatchers.status().isNotFound())
                 .andReturn().getResponse();
-
-        Question addedQuestion = objectMapper.readValue(response.getContentAsString(), Question.class);
-        assertThat(addedQuestion).isEqualToIgnoringGivenFields(question, "id");
+        assertEquals("Subject not found", questionResponse.getContentAsString());
 
     }
 
     @Test
-    void getQuestionById() throws Exception {
-        Question question = new Question(1, 1, "What is 2+5", "Maths",
-                new ArrayList<>(List.of("1", "4", "5", "7")), "d");
+    void givenCorrectQuestionFields_whenAddQuestionIsCalled_thenIsCreatedIsThrown() throws Exception {
+        assertEquals(201, questionResponse.getStatus());
+        Question addedQuestion = objectMapper.readValue(questionResponse.getContentAsString(), Question.class);
+        assertThat(addedQuestion).isEqualToIgnoringGivenFields(question, "id");
+    }
 
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.get("/admin/question")
-                .param("questionId", "1"))
+    @Test
+    void givenCorrectIdRequested_whenGetQuestionByIdIsCalled_thenIsFoundIsThrown() throws Exception {
+        int addedQuestionId = questionRepository.findQuestionByStatement("What is 6+7").get().getId();
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.get("/admin/question")
+                        .param("questionId", Integer.toString(addedQuestionId)))
                 .andExpect(MockMvcResultMatchers.status().isFound())
                 .andReturn().getResponse();
 
-        Question receivedQuestion = objectMapper.readValue(response.getContentAsString(), Question.class);
-        assertThat(question).isEqualToComparingFieldByField(receivedQuestion);
+        Question receivedQuestion = objectMapper.readValue(questionResponse.getContentAsString(), Question.class);
+        assertThat(question).isEqualToIgnoringGivenFields(receivedQuestion, "id");
+    }
 
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/admin/question")
+    @Test
+    void givenWrongIdRequested_whenGetQuestionByIdIsCalled_thenNotFoundIsThrown() throws Exception {
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.get("/admin/question")
                         .param("questionId", "324"))
                 .andExpect(MockMvcResultMatchers.status().isNotFound())
                 .andReturn().getResponse();
-        assertEquals("Question not found", response.getContentAsString());
+        assertEquals("Question not found", questionResponse.getContentAsString());
 
     }
 
     @Test
-    void getQuestionByStatement() throws Exception{
-        Question question = new Question(1, 1, "What is 2+5", "Maths",
-                new ArrayList<>(List.of("1", "4", "5", "7")), "d");
-
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.get("/admin/question/statement")
-                        .param("questionStatement", "What is 2+5"))
+    void givenCorrectStatementRequested_whenGetQuestionByStatementIsCalled_thenIsFoundIsThrown() throws Exception {
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.get("/admin/question/statement")
+                        .param("questionStatement", "What is 6+7"))
                 .andExpect(MockMvcResultMatchers.status().isFound())
                 .andReturn().getResponse();
 
-        Question receivedQuestion = objectMapper.readValue(response.getContentAsString(), Question.class);
-        assertThat(question).isEqualToComparingFieldByField(receivedQuestion);
+        Question receivedQuestion = objectMapper.readValue(questionResponse.getContentAsString(), Question.class);
+        assertThat(question).isEqualToIgnoringGivenFields(receivedQuestion, "id");
 
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/admin/question/statement")
-                        .param("questionStatement", "What is not 2+5"))
-                .andExpect(MockMvcResultMatchers.status().isNotFound())
-                .andReturn().getResponse();
-        assertEquals("Question not found", response.getContentAsString());
+
     }
 
     @Test
-    void updateQuestion() throws Exception{
-        Question question = new Question();
-        MockHttpServletResponse  response = mockMvc.perform(MockMvcRequestBuilders.put("/admin/question")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(question)))
+    void givenWrongStatementRequested_whenGetQuestionByStatementIsCalled_thenNotFoundIsThrown() throws Exception {
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.get("/admin/question/statement")
+                        .param("questionStatement", "What is not 6+7"))
+                .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andReturn().getResponse();
+        assertEquals("Question not found", questionResponse.getContentAsString());
+    }
+
+    @Test
+    void givenIncompleteQuestionField_whenUpdateQuestionIsCalled_thenBadRequestIsThrown() throws Exception {
+        Question incompleteFieldQuestion = new Question();
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.put("/admin/question")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(incompleteFieldQuestion)))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
 
-        assertEquals("Question statement, subject, options and answer cannot be null", response.getContentAsString());
+        assertEquals("Question statement, subject, options and answer cannot be null", questionResponse.getContentAsString());
+    }
 
-        question = new Question(15, 3, "What is y if 3/y + 1 = 2", "Maths",
-                new ArrayList<>(List.of("4", "3", "5", "6")), "b");
-        response = mockMvc.perform(MockMvcRequestBuilders.put("/admin/question")
+    @Test
+    void givenCompleteQuestionField_whenUpdateQuestionIsCalled_thenIsOkIsThrown() throws Exception {
+        int addedQuestionId = questionRepository.findQuestionByStatement("What is 6+7").get().getId();
+        question = new Question(addedQuestionId, 1, "What is not 6+7", "",
+                new ArrayList<>(List.of("3", "5", "13", "17")), "c");
+
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.put("/admin/question")
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(question)))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andReturn().getResponse();
-        Question updatedQuestion = objectMapper.readValue(response.getContentAsString(), Question.class );
+        Question updatedQuestion = objectMapper.readValue(questionResponse.getContentAsString(), Question.class);
         assertThat(updatedQuestion).isEqualToComparingFieldByField(question);
     }
 
     @Test
-    void deleteQuestion() throws Exception{
-        MockHttpServletResponse  response = mockMvc.perform(MockMvcRequestBuilders.delete("/admin/question")
-                        .param("questionId", "252345"))
-                .andExpect(MockMvcResultMatchers.status().isNotFound())
-                .andReturn().getResponse();
-        assertEquals("Question not found", response.getContentAsString());
-        response = mockMvc.perform(MockMvcRequestBuilders.delete("/admin/question")
-                        .param("questionId", "15"))
+    void givenCorrectQuestionId_whenDeleteQuestionIsCalled_thenIsOkIsThrown() throws Exception {
+        int addedQuestionId = questionRepository.findQuestionByStatement("What is 6+7").get().getId();
+        questionResponse = mockMvc.perform(MockMvcRequestBuilders.delete("/admin/question")
+                        .param("questionId", Integer.toString(addedQuestionId)))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andReturn().getResponse();
-        assertEquals("Deleted successfully", response.getContentAsString());
+        assertEquals("Deleted successfully", questionResponse.getContentAsString());
 
     }
 
+    //Subjects test starts here
     @Test
-    void addSubject() throws Exception{
-        Subject subject = new Subject();
-        MockHttpServletResponse  response = mockMvc.perform(MockMvcRequestBuilders.post("/admin/subject")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(subject)))
+    public void givenAnyNullSubjectField_whenAddSubjectIsCalled_thenBadRequestIsThrown() throws Exception {
+        Subject nullFieldSubject = new Subject();
+        subjectResponse = mockMvc.perform(MockMvcRequestBuilders.post("/admin/subject")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(nullFieldSubject)))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
-        assertEquals("Subject name and allowed-attempts cannot be null", response.getContentAsString());
+        assertEquals("Subject name and allowed-attempts cannot be null", subjectResponse.getContentAsString());
+    }
 
-        subject = new Subject("Logic", 5, new HashSet<>());
 
-        response = mockMvc.perform(MockMvcRequestBuilders.post("/admin/subject")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(subject)))
-                .andExpect(MockMvcResultMatchers.status().isCreated())
-                .andReturn().getResponse();
-
-        Subject receivedSubject = objectMapper.readValue(response.getContentAsString(), Subject.class);
-
-        assertThat(receivedSubject).isEqualToIgnoringGivenFields(subject, "id");
-
+    @Test
+    void givenCorrectSubjectFields_whenAddSubjectIsCalled_thenIsCreatedIsThrown() throws Exception {
+        assertEquals(201, subjectResponse.getStatus());
+        Subject addedSubject = objectMapper.readValue(subjectResponse.getContentAsString(), Subject.class);
+        assertThat(addedSubject).isEqualToIgnoringGivenFields(subject, "id");
     }
 
     @Test
-    void getSubjectById() throws Exception {
-        Subject subject = new Subject(2, "English", 5, new HashSet<>());
+    void givenCorrectIdRequested_whenGetSubjectByIdIsCalled_thenIsFoundIsThrown() throws Exception {
+        int addedSubjectId = subjectRepository.findSubjectByName(subject.getName()).get().getId();
 
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.get("/admin/subject")
-                        .param("subjectId", "2"))
+        subjectResponse = mockMvc.perform(MockMvcRequestBuilders.get("/admin/subject")
+                        .param("subjectId", Integer.toString(addedSubjectId)))
                 .andExpect(MockMvcResultMatchers.status().isFound())
                 .andReturn().getResponse();
-        Subject receivedSubject = objectMapper.readValue(response.getContentAsString(), Subject.class);
 
-        assertThat(receivedSubject).isEqualToComparingFieldByField(subject);
+        Subject addedSubject = objectMapper.readValue(subjectResponse.getContentAsString(), Subject.class);
+        assertThat(addedSubject).isEqualToIgnoringGivenFields(subject, "id");
+    }
 
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/admin/subject")
+    @Test
+    void givenWrongIdRequested_whenGetSubjectByIdIsCalled_thenNotFoundIsThrown() throws Exception {
+        subjectResponse = mockMvc.perform(MockMvcRequestBuilders.get("/admin/subject")
                         .param("subjectId", "324"))
                 .andExpect(MockMvcResultMatchers.status().isNotFound())
                 .andReturn().getResponse();
-        assertEquals("Subject not found", response.getContentAsString());
+        assertEquals("Subject not found", subjectResponse.getContentAsString());
+
     }
 
     @Test
-    void getSubjectByName() throws Exception {
-        Subject subject = new Subject(2, "English", 5, new HashSet<>());
-
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.get("/admin/subject/name")
-                        .param("subjectName", "English"))
+    void givenCorrectSubjectNameRequested_whenGetSubjectByNameIsCalled_thenIsFoundIsThrown() throws Exception {
+        subjectResponse = mockMvc.perform(MockMvcRequestBuilders.get("/admin/subject/name")
+                        .param("subjectName", "Logic"))
+                .andExpect(MockMvcResultMatchers.status().isFound())
                 .andReturn().getResponse();
 
-        Subject receivedSubject = objectMapper.readValue(response.getContentAsString(), Subject.class);
+        Subject addedSubject = objectMapper.readValue(subjectResponse.getContentAsString(), Subject.class);
+        assertThat(addedSubject).isEqualToIgnoringGivenFields(subject, "id");
 
-        assertThat(receivedSubject).isEqualToComparingFieldByField(subject);
 
-        response = mockMvc.perform(MockMvcRequestBuilders.get("/admin/subject/name")
+    }
+
+    @Test
+    void givenWrongSubjectNameRequested_whenGetSubjectByNameIsCalled_thenNotFoundIsThrown() throws Exception {
+        subjectResponse = mockMvc.perform(MockMvcRequestBuilders.get("/admin/subject/name")
                         .param("subjectName", "GK"))
                 .andExpect(MockMvcResultMatchers.status().isNotFound())
                 .andReturn().getResponse();
-        assertEquals("Subject not found", response.getContentAsString());
+        assertEquals("Subject not found", subjectResponse.getContentAsString());
     }
 
     @Test
-    void updateSubject() throws Exception{
-        Subject subject = new Subject();
-        MockHttpServletResponse  response = mockMvc.perform(MockMvcRequestBuilders.put("/admin/subject")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(subject)))
+    void givenIncompleteSubjectField_whenUpdateSubjectIsCalled_thenBadRequestIsThrown() throws Exception {
+        Subject incompleteFieldSubject = new Subject();
+        subjectResponse = mockMvc.perform(MockMvcRequestBuilders.put("/admin/subject")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(incompleteFieldSubject)))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
 
-        assertEquals("Subject name and allowed-attempts cannot be null", response.getContentAsString());
-
-        subject = new Subject(2,"English", 6, new HashSet<>());
-
-        response = mockMvc.perform(MockMvcRequestBuilders.put("/admin/subject")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(subject)))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andReturn().getResponse();
-
-        Subject receivedSubject = objectMapper.readValue(response.getContentAsString(), Subject.class);
-        assertThat(receivedSubject).isEqualToComparingFieldByField(subject);
+        assertEquals("Subject name and allowed-attempts cannot be null", subjectResponse.getContentAsString());
     }
 
     @Test
-    void deleteSubject() throws Exception {
-        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.delete("/admin/subject")
-                        .param("subjectId", "252345"))
-                .andExpect(MockMvcResultMatchers.status().isNotFound())
-                .andReturn().getResponse();
-        assertEquals("Subject not found", response.getContentAsString());
+    void givenCompleteSubjectField_whenUpdateSubjectIsCalled_thenIsOkIsThrown() throws Exception {
+        int addedSubjectId = subjectRepository.findSubjectByName("Logic").get().getId();
+        subject = new Subject(addedSubjectId,"Logic", 6, new HashSet<>());
 
-        Subject subject = new Subject("GK", 5, new HashSet<>());
-
-        response = mockMvc.perform(MockMvcRequestBuilders.post("/admin/subject")
+        subjectResponse = mockMvc.perform(MockMvcRequestBuilders.put("/admin/subject")
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(subject)))
-                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.status().isOk())
                 .andReturn().getResponse();
+        Subject updatedSubject = objectMapper.readValue(subjectResponse.getContentAsString(), Subject.class);
+        assertThat(updatedSubject).isEqualToComparingFieldByField(subject);
+    }
 
-        Subject addedSubject = objectMapper.readValue(response.getContentAsString(), Subject.class);
-        assertThat(subject).isEqualToIgnoringGivenFields(addedSubject, "id");
-
-        int  addedSubjectId = addedSubject.getId();
-        response = mockMvc.perform(MockMvcRequestBuilders.delete("/admin/subject")
+    @Test
+    void givenCorrectSubjectId_whenDeleteSubjectIsCalled_thenIsOkIsThrown() throws Exception {
+        int addedSubjectId = subjectRepository.findSubjectByName("Logic").get().getId();
+        subjectResponse = mockMvc.perform(MockMvcRequestBuilders.delete("/admin/subject")
                         .param("subjectId", Integer.toString(addedSubjectId)))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andReturn().getResponse();
-        assertEquals("Deleted successfully", response.getContentAsString());
+        assertEquals("Deleted successfully", subjectResponse.getContentAsString());
+
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SubjectRepository extends JpaRepository<Subject, Integer> {
@@ -21,5 +22,5 @@ public interface SubjectRepository extends JpaRepository<Subject, Integer> {
     @Query(value = "select s.allowedAttempts from Subject s where s.name = ?1")
     int getAttemptsAllowedOfSubject(String currentSubject);
 
-    Subject findSubjectByName(String subjectName);
+    Optional<Subject> findSubjectByName(String subjectName);
 }

@@ -1,8 +1,7 @@
-package com.ria.acmetesting.services;
+package com.ria.acmetesting.services.implementation;
 
 import com.ria.acmetesting.dbentities.Question;
 import com.ria.acmetesting.dbentities.Student;
-import com.ria.acmetesting.dbentities.Subject;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
 import com.ria.acmetesting.exceptionhandling.exceptions.TestNotStartedException;
@@ -11,6 +10,7 @@ import com.ria.acmetesting.respositories.QuestionRepository;
 import com.ria.acmetesting.respositories.ScoreRepository;
 import com.ria.acmetesting.respositories.StudentRepository;
 import com.ria.acmetesting.respositories.SubjectRepository;
+import com.ria.acmetesting.services.service.ACMETestService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ import java.util.*;
 
 @Service
 @Slf4j
-public class ACMETestServiceImpl implements ACMETestService{
+public class ACMETestServiceImpl implements ACMETestService {
     @Autowired
     StudentRepository studentRepository;
 
@@ -227,81 +227,5 @@ public class ACMETestServiceImpl implements ACMETestService{
 
     }
 
-    @Override
-    public Question addQuestion(Question question){
-        if(question.getSubject()==null || question.getLevel()==0 || question.getOptions()==null
-                || question.getAnswer()==null) throw new RequiredQuestionFieldNullException();
-        return questionRepository.save(question);
-    }
 
-
-    @Override
-    public Question getQuestionById(int questionId) {
-        return questionRepository.findById(questionId).orElseThrow(QuestionNotFoundException::new);
-    }
-
-    @Override
-    public Question getQuestionByStatement(String questionStatement) {
-        Question question = questionRepository.findQuestionByStatement(questionStatement);
-        if(question==null) throw new QuestionNotFoundException();
-        else return question;
-    }
-
-    @Override
-    public Question updateQuestion(Question question) {
-        if(question.getId() == 0 || question.getSubject()==null
-                || question.getLevel()==0 || question.getOptions()==null
-                || question.getAnswer()==null) throw new RequiredQuestionFieldNullException();
-        return questionRepository.save(question);
-    }
-
-    @Override
-    public void deleteQuestion(int questionId) {
-        Question question = questionRepository.findById(questionId).orElseThrow(QuestionNotFoundException::new);
-        questionRepository.deleteById(questionId);
-
-    }
-
-    @Override
-    public Subject addSubject(Subject subject) {
-        if(subject.getName()==null || subject.getAllowedAttempts()==0) throw new RequiredSubjectFieldNullException();
-        return subjectRepository.save(subject);
-    }
-
-    @Override
-    public Subject getSubjectById(int subjectId){
-        return subjectRepository.findById(subjectId).orElseThrow(SubjectNotFoundException::new);
-    }
-
-    @Override
-    public Subject getSubjectByName(String subjectName) {
-        Subject subject = subjectRepository.findSubjectByName(subjectName);
-        if(subject==null) throw new SubjectNotFoundException();
-        else return subject;
-    }
-
-    @Override
-    public Subject updateSubject(Subject subject) {
-        if(subject.getId()==0 || subject.getName()==null
-                || subject.getAllowedAttempts()==0) throw new RequiredSubjectFieldNullException();
-        return subjectRepository.save(subject);
-    }
-
-    @Override
-    public void deleteSubject(int subjectId) {
-        Subject subject = subjectRepository.findById(subjectId).orElseThrow(SubjectNotFoundException::new);
-        subjectRepository.deleteById(subjectId);
-    }
-
-    @Override
-    public Integer getScore(String studentUsername) {
-        Student student = studentRepository.findByUsername(studentUsername).orElseThrow(StudentNotFoundException::new);
-        if(student.getTotalQuestionsAttemptedOfSubject()
-                ==subjectRepository.getAttemptsAllowedOfSubject(student.getCurrentSubject())){
-
-        }
-        Integer totalScore = scoreRepository.getTotalScore(studentRepository.getIdByUsername(studentUsername));
-        if(totalScore==null) return 0;
-        else return totalScore;
-    }
 }

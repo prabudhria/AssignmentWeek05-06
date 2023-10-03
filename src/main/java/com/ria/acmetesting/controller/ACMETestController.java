@@ -3,7 +3,8 @@ package com.ria.acmetesting.controller;
 import com.ria.acmetesting.dbentities.Student;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
-import com.ria.acmetesting.services.ACMETestServiceImpl;
+import com.ria.acmetesting.services.implementation.ACMETestServiceImpl;
+import com.ria.acmetesting.services.implementation.ScoreServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,9 @@ public class ACMETestController {
 
     @Autowired
     ACMETestServiceImpl acmeTestService;
+
+    @Autowired
+    ScoreServiceImpl scoreService;
     @PostMapping(value = "/register")
     ResponseEntity<StudentDTO> register(@RequestBody Student student) {
         return new ResponseEntity<>(acmeTestService.saveStudent(student), HttpStatus.CREATED);
@@ -54,6 +58,6 @@ public class ACMETestController {
     }
     @GetMapping(value = "/score")
     ResponseEntity<Integer> getScore(@RequestParam String studentUsername){
-        return new ResponseEntity<>(acmeTestService.getScore(studentUsername), HttpStatus.OK);
+        return new ResponseEntity<>(scoreService.getScore(studentUsername), HttpStatus.OK);
     }
 }

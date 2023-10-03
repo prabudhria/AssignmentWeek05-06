@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface QuestionRepository extends JpaRepository<Question, Integer> {
     @Query(value = "select min(q.id) from Question q where q.level=?1 and  q.subject=?2 and q.id > ?3")
@@ -14,5 +16,5 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
     Integer getMaxQuestionLevelOfSubject(String subject);
 
 
-    Question findQuestionByStatement(String questionStatement);
+    Optional<Question> findQuestionByStatement(String questionStatement);
 }
