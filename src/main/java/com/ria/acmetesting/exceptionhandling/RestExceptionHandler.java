@@ -29,7 +29,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     }
     @ExceptionHandler(value =SubjectNotFoundException.class)
     public ResponseEntity<Object> subjectNotFoundExceptionHandler(){
-        return new ResponseEntity<>("Subject requested does not exist", HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>("Subject not found", HttpStatus.NOT_FOUND);
     }
     @ExceptionHandler(value =RequiredQuestionFieldNullException.class)
     public ResponseEntity<Object> requiredQuestionFieldNullExceptionHandler(){

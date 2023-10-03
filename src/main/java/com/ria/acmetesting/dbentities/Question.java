@@ -8,7 +8,6 @@ import java.util.ArrayList;
 @Entity
 @Getter
 @Setter
-@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "question")
@@ -20,7 +19,14 @@ public class Question {
     private int level;
     private String statement;
     private String subject;
-    private String answer;
     private ArrayList<String> options = new ArrayList<>();
+    private String answer;
 
+    public Question(int level, String statement, String subject, ArrayList<String> options, String answer) {
+        this.level = level;
+        this.statement = statement;
+        this.subject = subject;
+        this.options = options;
+        this.answer = answer;
+    }
 }

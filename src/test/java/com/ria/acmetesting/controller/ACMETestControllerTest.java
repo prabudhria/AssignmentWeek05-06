@@ -3,8 +3,10 @@ package com.ria.acmetesting.controller;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ria.acmetesting.config.DBContainers;
+import com.ria.acmetesting.dbentities.Question;
 import com.ria.acmetesting.dtos.QuestionDTO;
 import com.ria.acmetesting.dtos.StudentDTO;
+import com.ria.acmetesting.respositories.QuestionRepository;
 import org.junit.ClassRule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,23 +52,31 @@ public class ACMETestControllerTest {
         this.mockMvc = webAppContextSetup(webApplicationContext).build();
     }
 
+//    givenInvalidUserDetails_whenRegisterUserIsCalled_thenBadRequestIsThrown
     @Test
     public void testRegister() throws Exception {
-        StudentDTO registeringStudent = new StudentDTO("firstUsername", "name", 21);
-        MockHttpServletResponse registrationResponse = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(registeringStudent)))
-                .andReturn().getResponse();
-
-        StudentDTO registeredStudent = objectMapper.readValue(registrationResponse.getContentAsString(), StudentDTO.class);
-        assertEquals(201, registrationResponse.getStatus());
-        assertThat(registeringStudent).isEqualToComparingFieldByField(registeredStudent);
-
-        StudentDTO nullFieldStudent = new StudentDTO( "username",null, 21);
-        MockHttpServletResponse nullStudentResult = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
-                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(nullFieldStudent)))
+        StudentDTO studentDTO = new StudentDTO();
+        MockHttpServletResponse response = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(studentDTO)))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andReturn().getResponse();
-        assertEquals( "The name, age or username cannot be null", nullStudentResult.getContentAsString());
+        assertEquals( "The name, age or username cannot be null", response.getContentAsString());
+
+        studentDTO = new StudentDTO( "firstUsername","name", 21);
+        response = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(studentDTO)))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andReturn().getResponse();
+        StudentDTO registeredStudent = objectMapper.readValue(response.getContentAsString(), StudentDTO.class);
+        assertThat(studentDTO).isEqualToComparingFieldByField(registeredStudent);
+
+        studentDTO = new StudentDTO( "firstUsername","nameWithSameUsername", 21);
+        response = mockMvc.perform(MockMvcRequestBuilders.post("/user/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(studentDTO)))
+                .andExpect(MockMvcResultMatchers.status().isNotAcceptable())
+                .andReturn().getResponse();
+        assertEquals( "This username has already been taken, kindly try another username", response.getContentAsString());
+
 //        mockMvc.perform(MockMvcRequestBuilders
 //                .post("/register").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(nullFieldStudent)))
 //                .andExpect(result -> assertTrue(result.getResolvedException() instanceof RequiredStudentFieldNullException))
@@ -91,6 +101,7 @@ public class ACMETestControllerTest {
 
         assertEquals(200, response.getStatus());
         assertEquals(sampleSubject, receivedSubjectList);
+
 
     }
 

@@ -1,7 +1,9 @@
 package com.ria.acmetesting.dbentities;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 
@@ -10,6 +12,8 @@ import java.util.Set;
 @Entity
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class Subject {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "subject_generator")
@@ -22,5 +26,11 @@ public class Subject {
 
     @OneToMany(mappedBy = "subject")
     Set<Score> score;
+
+    public Subject(String name, int allowedAttempts, Set<Score> score) {
+        this.name = name;
+        this.allowedAttempts = allowedAttempts;
+        this.score = score;
+    }
 }
 
