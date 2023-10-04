@@ -11,7 +11,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @ControllerAdvice
 @Slf4j
 public class RestExceptionHandler extends ResponseEntityExceptionHandler {
-    @ExceptionHandler(value = TestHasEndedException.class)
+    @ExceptionHandler(value = {TestHasEndedException.class})
     public ResponseEntity<Object> examEndedExceptionHandler(){
         return new ResponseEntity<>("The test has ended, please select next subject or finish", HttpStatus.BAD_REQUEST);
     }
@@ -33,7 +33,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     }
     @ExceptionHandler(value =RequiredQuestionFieldNullException.class)
     public ResponseEntity<Object> requiredQuestionFieldNullExceptionHandler(){
-        return new ResponseEntity<>("Question statement, subject, options and answer cannot be null", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>("Question statement, subject, options and answer cannot be null", HttpStatus.NOT_ACCEPTABLE);
     }
     @ExceptionHandler(value = LevelDoesNotExistException.class)
     public ResponseEntity<Object> levelDoesNotExistExceptionHandler(){
@@ -45,7 +45,7 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
     }
     @ExceptionHandler(value = RequiredSubjectFieldNullException.class)
     public ResponseEntity<Object> requiredSubjectFieldNullExceptionHandler(){
-        return new ResponseEntity<>("Subject name and allowed-attempts cannot be null", HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>("Subject name and allowed-attempts cannot be null", HttpStatus.NOT_ACCEPTABLE);
     }
     @ExceptionHandler(value = NoMoreQuestionsForTheSubjectException.class)
     public ResponseEntity<Object> noMoreQuestionsForTheSubjectExceptionHandler(){

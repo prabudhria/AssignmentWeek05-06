@@ -20,7 +20,7 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     public Question addQuestion(Question question){
         if(question.getSubject()==null || question.getLevel()==0 || question.getOptions()==null
-                || question.getAnswer()==null) throw new RequiredQuestionFieldNullException();
+                || question.getCorrectOption()==null) throw new RequiredQuestionFieldNullException();
 
         String subjectOfQuestion = question.getSubject();
         subjectRepository.findSubjectByName(subjectOfQuestion).orElseThrow(SubjectNotFoundException::new);
@@ -42,7 +42,7 @@ public class QuestionServiceImpl implements QuestionService {
     public Question updateQuestion(Question question) {
         if(question.getId() == 0 || question.getSubject()==null
                 || question.getLevel()==0 || question.getOptions()==null
-                || question.getAnswer()==null) throw new RequiredQuestionFieldNullException();
+                || question.getCorrectOption()==null) throw new RequiredQuestionFieldNullException();
         return questionRepository.save(question);
     }
 

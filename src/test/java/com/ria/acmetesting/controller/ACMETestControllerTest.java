@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -72,8 +73,6 @@ public class ACMETestControllerTest {
         studentRepository.findByUsername(student.getUsername()).ifPresent(value -> studentRepository.delete(value));
         params.clear();
     }
-
-    //    givenInvalidUserDetails_whenRegisterUserIsCalled_thenBadRequestIsThrown
     @Test
     public void givenValidDetails_whenRegisterIsCalled_thenIsCreatedIsThrown() throws Exception {
         assertEquals(201, response.getStatus());

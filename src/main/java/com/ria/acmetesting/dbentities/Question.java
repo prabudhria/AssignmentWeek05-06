@@ -20,13 +20,13 @@ public class Question {
     private String statement;
     private String subject;
     private ArrayList<String> options = new ArrayList<>();
-    private String answer;
+    private String correctOption;
 
-    public Question(int level, String statement, String subject, ArrayList<String> options, String answer) {
+    public Question(int level, String statement, String subject, ArrayList<String> options, String correctOption) {
         this.level = level;
         this.statement = statement;
         this.subject = subject;
         this.options = options;
-        this.answer = answer;
+        this.correctOption = correctOption;
     }
 }

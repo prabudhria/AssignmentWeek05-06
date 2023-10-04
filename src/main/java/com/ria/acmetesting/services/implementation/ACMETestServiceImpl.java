@@ -190,7 +190,7 @@ public class ACMETestServiceImpl implements ACMETestService {
     private boolean isCorrectlyAnswered(Student student, String selectedOption) {
         Question question = questionRepository.findById(getQuestionAnsweredId(student))
                 .orElseThrow(QuestionNotFoundException::new);
-        if(selectedOption.equals(question.getAnswer())){
+        if(selectedOption.equals(question.getCorrectOption())){
             int subjectId=subjectRepository.getIdByName(student.getCurrentSubject());
             scoreRepository.updateScore(student.getCurrentLevel(), student.getId(), subjectId);
             return true;

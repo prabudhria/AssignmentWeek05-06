@@ -81,7 +81,7 @@ class AdminControllerTest {
         question = new Question();
         questionResponse = mockMvc.perform(MockMvcRequestBuilders.post("/admin/question")
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(question)))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.status().isNotAcceptable())
                 .andReturn().getResponse();
         assertEquals("Question statement, subject, options and answer cannot be null", questionResponse.getContentAsString());
     }
@@ -154,7 +154,7 @@ class AdminControllerTest {
         Question incompleteFieldQuestion = new Question();
         questionResponse = mockMvc.perform(MockMvcRequestBuilders.put("/admin/question")
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(incompleteFieldQuestion)))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.status().isNotAcceptable())
                 .andReturn().getResponse();
 
         assertEquals("Question statement, subject, options and answer cannot be null", questionResponse.getContentAsString());
@@ -191,7 +191,7 @@ class AdminControllerTest {
         Subject nullFieldSubject = new Subject();
         subjectResponse = mockMvc.perform(MockMvcRequestBuilders.post("/admin/subject")
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(nullFieldSubject)))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.status().isNotAcceptable())
                 .andReturn().getResponse();
         assertEquals("Subject name and allowed-attempts cannot be null", subjectResponse.getContentAsString());
     }
@@ -254,7 +254,7 @@ class AdminControllerTest {
         Subject incompleteFieldSubject = new Subject();
         subjectResponse = mockMvc.perform(MockMvcRequestBuilders.put("/admin/subject")
                         .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(incompleteFieldSubject)))
-                .andExpect(MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.status().isNotAcceptable())
                 .andReturn().getResponse();
 
         assertEquals("Subject name and allowed-attempts cannot be null", subjectResponse.getContentAsString());

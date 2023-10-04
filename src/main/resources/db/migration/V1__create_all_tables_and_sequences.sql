@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS question;
 CREATE TABLE question (
         id INTEGER NOT NULL,
-        answer VARCHAR(255) NOT NULL,
+        correct_option VARCHAR(255) NOT NULL,
         level INTEGER NOT NULL,
         options VARCHAR[] NOT NULL,
         statement VARCHAR(255) NOT NULL UNIQUE,
