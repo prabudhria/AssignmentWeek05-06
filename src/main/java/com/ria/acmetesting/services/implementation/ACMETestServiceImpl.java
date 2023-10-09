@@ -13,8 +13,10 @@ import com.ria.acmetesting.respositories.SubjectRepository;
 import com.ria.acmetesting.services.service.ACMETestService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
@@ -38,7 +40,7 @@ public class ACMETestServiceImpl implements ACMETestService {
     public StudentDTO saveStudent(Student student) {
         if(student.getName() == null
                 || student.getAge()==0
-                || student.getUsername()==null) throw new RequiredStudentFieldNullException();
+                || student.getUsername()==null) throw new StudentNotFoundException();
         else if (studentRepository.findUsername(student.getUsername())!=null) throw new UsernameAlreadyTakenException();
         Student initialisedStudent = resetStudent(student);
         return new StudentDTO(studentRepository.save(initialisedStudent));
